@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Criador de Apostilas</title>
+<meta name="description" content="Crie apostilas de ensino com capa, imagens, atividades e gabarito, e baixe em PDF.">
+<meta name="theme-color" content="#2747d6">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Apostilas">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Figtree:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Baloo+2:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra superior + painel de edição (esquerda) + folha A4 ao vivo (direita); no celular vira abas */
+:root{
+  --bg:#eceff3; --panel:#ffffff; --ink:#17202e; --muted:#5d6878; --line:#d6dbe3;
+  --accent:#2747d6; --accent-ink:#ffffff; --soft:#e8ecfb; --marca:#ffd84d; --danger:#b42318;
+  --display:"Fraunces", Georgia, serif; --body:"Figtree", system-ui, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e131b; --panel:#161d28; --ink:#e5e9ef; --muted:#97a2b2; --line:#2a3443;
+    --accent:#8197ff; --accent-ink:#0e131b; --soft:#1f2940; --danger:#ff8a7a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e131b; --panel:#161d28; --ink:#e5e9ef; --muted:#97a2b2; --line:#2a3443;
+  --accent:#8197ff; --accent-ink:#0e131b; --soft:#1f2940; --danger:#ff8a7a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.topo{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.marca{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;margin-right:auto}
+.marca i{display:inline-block;width:22px;height:26px;border-radius:3px;background:var(--accent);position:relative}
+.marca i::after{content:"";position:absolute;left:4px;right:4px;top:8px;height:5px;background:var(--marca);border-radius:1px}
+.acoes{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:500;font-size:14px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ia{background:var(--marca);color:#1b1b1b;border-color:#e0b82a;font-weight:600}
+.btn.peq{padding:4px 8px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn.perigo{color:var(--danger)}
+
+.principal{flex:1;min-height:0;display:grid;grid-template-columns:420px 1fr}
+.editor{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.abas{display:flex;border-bottom:1px solid var(--line)}
+.abas button{flex:1;border:0;background:none;padding:11px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:2px solid transparent}
+.abas button[disabled]{opacity:.45;cursor:default}
+.abas button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.rolagem{flex:1;overflow:auto;padding:14px 16px 90px}
+.painel[hidden]{display:none}
+
+.campo{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.campo label,.rot{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.campo input[type=text],.campo input[type=number],.campo select,.campo textarea{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:8px 10px;width:100%}
+.campo textarea{resize:vertical;min-height:70px;line-height:1.45}
+.dica-campo{font-size:12px;color:var(--muted);margin:-4px 0 10px}
+.linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:8px;cursor:pointer}
+.cores{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cores button{width:30px;height:30px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.cores button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.estilos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.estilos button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 6px;cursor:pointer;text-align:center}
+.estilos button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft)}
+.estilos b{display:block;font-size:20px}
+.estilos small{color:var(--muted);font-size:12px}
+h3.sec{font-family:var(--display);font-size:16px;margin:18px 0 10px;font-weight:600}
+h3.sec:first-child{margin-top:0}
+
+.bloco{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:var(--panel);overflow:hidden}
+.bloco-cab{display:flex;align-items:center;gap:6px;padding:6px 8px 6px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
+.bloco-cab .tipo{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-right:auto;display:flex;align-items:center;gap:6px}
+.bloco-cab .tipo::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--cor-tipo,var(--muted))}
+.ic{border:0;background:none;width:28px;height:28px;border-radius:6px;cursor:pointer;color:var(--muted);font-size:14px}
+.ic:hover{background:var(--panel);color:var(--ink)}
+.bloco-corpo{padding:10px 12px 2px}
+.bloco.recolhido .bloco-corpo{display:none}
+.vazio{border:1px dashed var(--line);border-radius:10px;padding:20px;text-align:center;color:var(--muted)}
+.paleta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.paleta button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px;text-align:left;cursor:pointer}
+.paleta button:hover{border-color:var(--accent)}
+.paleta b{display:block;font-size:14px}
+.paleta small{color:var(--muted);font-size:12px}
+.add-fim{position:sticky;bottom:0;padding:10px 16px;background:var(--panel);border-top:1px solid var(--line);display:flex;gap:8px}
+.add-fim .btn{flex:1}
+.thumb{max-width:100%;max-height:130px;border-radius:6px;display:block}
+.img-alvo{border:1.5px dashed var(--line);border-radius:9px;padding:10px;margin-bottom:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--bg);transition:border-color .15s}
+.img-alvo.sobre{border-color:var(--accent);background:var(--soft)}
+.img-alvo .thumb{max-width:130px;max-height:96px;object-fit:cover}
+.img-alvo .vz{width:96px;height:72px;border-radius:6px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:24px}
+.img-btns{display:flex;flex-direction:column;gap:6px;flex:1;min-width:150px}
+.img-btns .fila{display:flex;gap:6px;flex-wrap:wrap}
+.img-btns label.btn{display:inline-block}
+.img-btns small{color:var(--muted);font-size:12px}
+.gal-item{border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+.gal-item .rot{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.soltar{position:fixed;inset:0;background:rgba(39,71,214,.12);border:3px dashed var(--accent);z-index:40;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:var(--accent);pointer-events:none}
+.soltar[hidden]{display:none}
+.painel-tela{position:fixed;inset:0;background:var(--bg);z-index:45;display:flex;flex-direction:column}
+.painel-tela[hidden],.trava[hidden]{display:none}
+.p-topo{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.p-topo h2{font-family:var(--display);margin:0 auto 0 0;font-size:20px}
+.p-corpo{flex:1;overflow:auto;padding:20px 16px 60px}
+.p-int{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:2px}
+.tile b{font-family:var(--display);font-size:28px;font-variant-numeric:tabular-nums}
+.tile span{color:var(--muted);font-size:13px}
+.tile.alerta{border-color:#e0a100;box-shadow:inset 4px 0 0 #e0a100}
+.cartao{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.cartao h3{font-family:var(--display);margin:0 0 12px;font-size:17px}
+.cfg-grade{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filtros input,.filtros select{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:8px 10px}
+.filtros input{flex:1;min-width:180px}
+.u-linha{display:grid;grid-template-columns:40px minmax(160px,1.4fr) 110px minmax(200px,1.6fr) 140px auto;gap:12px;align-items:center;padding:12px 4px;border-top:1px solid var(--line)}
+.u-av{width:40px;height:40px;border-radius:50%;background:var(--bg)}
+.u-quem{display:flex;flex-direction:column;min-width:0}
+.u-quem b,.u-quem small,.u-quando small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u-quem small,.u-quando small{color:var(--muted);font-size:12px}
+.u-num{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.u-num b{color:var(--ink);font-variant-numeric:tabular-nums}
+.u-quando{display:flex;flex-direction:column;font-size:13px;min-width:0}
+.u-acoes{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;justify-self:start;white-space:nowrap}
+.chip.liberado{background:#dcf3e5;color:#13633a}
+.chip.bloqueado{background:#fde3e0;color:#9b1c10}
+.chip.pendente{background:#fff0c2;color:#7a5200}
+.chip.adm{background:var(--soft);color:var(--accent)}
+.trava{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+.trava .modal{text-align:center;max-width:440px}
+@media (max-width: 900px){
+  .u-linha{grid-template-columns:40px 1fr auto;row-gap:8px}
+  .u-num,.u-quando,.u-acoes{grid-column:2 / -1}
+  .u-acoes{justify-content:flex-start}
+  .cfg-grade{grid-template-columns:1fr}
+}
+
+
+.visual{overflow:auto;min-height:0;padding:24px 16px 60px;position:relative}
+.visual-info{max-width:794px;margin:0 auto 10px;display:flex;justify-content:space-between;color:var(--muted);font-size:13px;gap:10px;flex-wrap:wrap}
+.zoom-caixa{margin:0 auto;position:relative}
+.zoom{width:794px;transform-origin:top left;position:absolute;left:0;top:0}
+.zoom .ap-folha{box-shadow:0 1px 3px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08);margin-bottom:24px}
+
+.modal-fundo{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal-fundo[hidden]{display:none}
+.modal{background:var(--panel);border-radius:14px;max-width:520px;width:100%;max-height:90%;overflow:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h2{font-family:var(--display);margin:0 0 6px;font-size:22px;text-wrap:balance}
+.modal p.sub{color:var(--muted);margin:0 0 14px;font-size:14px;line-height:1.45}
+.modal-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.aviso{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.aviso[hidden]{display:none}
+.carregando{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
+.carregando::before{content:"";width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.carregando::before{animation:none}}
+
+.mob-abas{display:none}
+@media (max-width: 900px){
+  .principal{grid-template-columns:1fr}
+  .editor,.visual{grid-column:1;grid-row:1}
+  body[data-vista="editar"] .visual{display:none}
+  body[data-vista="ver"] .editor{display:none}
+  .mob-abas{display:flex;background:var(--panel);border-top:1px solid var(--line)}
+  .mob-abas button{flex:1;border:0;background:none;padding:12px;font-weight:600;color:var(--muted);cursor:pointer}
+  .mob-abas button[aria-selected="true"]{color:var(--accent)}
+  .editor{border-right:0}
+  .topo{padding:8px 12px}
+  .acoes{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
+  .marca{font-size:18px}
+}
+</style>
+
+<style id="apcss">
+/* Estilos da apostila (folha A4 — sempre papel branco) */
+.ap-folha{width:794px;background:#fff;color:#1d222b;position:relative;--ap:#2747d6}
+.ap-conteudo{padding:56px 64px 64px;min-height:1123px}
+.ap-classica{--ap-tit:"Fraunces",Georgia,serif;--ap-txt:"Source Serif 4",Georgia,serif}
+.ap-moderna{--ap-tit:"Figtree",system-ui,sans-serif;--ap-txt:"Figtree",system-ui,sans-serif}
+.ap-infantil{--ap-tit:"Baloo 2",system-ui,sans-serif;--ap-txt:"Baloo 2",system-ui,sans-serif}
+.ap-folha{font-family:var(--ap-txt);font-size:15.5px;line-height:1.6}
+.ap-infantil .ap-folha,.ap-folha.ap-infantil{font-size:17px}
+.ap-capa{height:1010px;display:flex;flex-direction:column;padding:64px;overflow:hidden}
+.ap-capa-faixa{position:absolute;left:0;top:0;bottom:0;width:22px;background:var(--ap)}
+.ap-capa-topo{font-family:var(--ap-tit);font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:#5a6270;font-weight:600}
+.ap-capa-meio{margin:auto 0}
+.ap-capa-disc{display:inline-block;background:var(--ap);color:#fff;font-family:var(--ap-tit);font-weight:600;font-size:14px;padding:5px 12px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:22px}
+.ap-capa h1{font-family:var(--ap-tit);font-size:58px;line-height:1.05;margin:0 0 18px;letter-spacing:-.015em;color:#141821;text-wrap:balance}
+.ap-capa-sub{font-size:21px;color:#4a5260;margin:0;max-width:560px;line-height:1.4}
+.ap-capa-linha{width:90px;height:6px;background:var(--ap);margin:30px 0 0;border-radius:3px}
+.ap-capa-base{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #dde1e7;padding-top:18px;font-size:15px;color:#3b4250;gap:20px}
+.ap-capa-base b{display:block;font-family:var(--ap-tit);color:#141821;font-size:17px}
+.ap-aluno{display:grid;grid-template-columns:1fr 150px 170px;gap:16px;border:1.5px solid #c9ced6;border-radius:8px;padding:12px 16px;font-size:14px;margin-bottom:30px;color:#3b4250}
+.ap-aluno span{border-bottom:1px solid #9aa1ac;display:block;height:20px;margin-top:2px}
+.ap-sumario{margin-bottom:34px}
+.ap-sumario h2{font-family:var(--ap-tit);font-size:24px;margin:0 0 12px;color:#141821}
+.ap-sumario ol{list-style:none;padding:0;margin:0;counter-reset:s}
+.ap-sumario li{display:flex;gap:12px;padding:7px 0;border-bottom:1px dotted #c9ced6}
+.ap-sumario li b{color:var(--ap);font-family:var(--ap-tit);min-width:24px}
+.ap-h1{font-family:var(--ap-tit);font-size:28px;line-height:1.2;margin:34px 0 14px;color:#141821;display:flex;gap:14px;align-items:baseline;text-wrap:balance}
+.ap-h1 .n{color:#fff;background:var(--ap);font-size:18px;min-width:34px;height:34px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:none;transform:translateY(-3px)}
+.ap-bloco:first-child .ap-h1,.ap-bloco:first-child.ap-h1{margin-top:0}
+.ap-h2{font-family:var(--ap-tit);font-size:20px;margin:24px 0 8px;color:var(--ap)}
+.ap-folha p{margin:0 0 12px}
+.ap-folha mark{background:#ffe680;padding:0 2px;border-radius:2px}
+.ap-folha ul,.ap-folha ol.ap-lista{margin:0 0 14px;padding-left:24px}
+.ap-folha ul li::marker{color:var(--ap)}
+.ap-folha ol.ap-lista li::marker{color:var(--ap);font-weight:700}
+.ap-box{border-radius:8px;padding:14px 18px;margin:16px 0;border-left:5px solid var(--bx);background:var(--bxf)}
+.ap-box h4{margin:0 0 4px;font-family:var(--ap-tit);font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--bx)}
+.ap-box p:last-child{margin-bottom:0}
+.ap-box.dica{--bx:#1f7a4d;--bxf:#eaf6ef}
+.ap-box.atencao{--bx:#b54708;--bxf:#fff4e5}
+.ap-box.curiosidade{--bx:#6b3fa0;--bxf:#f3edfa}
+.ap-box.definicao{--bx:var(--ap);--bxf:#eef1fb}
+.ap-fig{margin:16px auto;text-align:center}
+.ap-fig img{max-width:100%;width:100%;display:block;border-radius:6px}
+.ap-fig figcaption{font-size:13px;color:#5a6270;margin-top:6px;font-style:italic;line-height:1.4}
+.ap-fig figcaption b{font-style:normal;color:#3b4250}
+.ap-fig .ph{border:2px dashed #c9ced6;border-radius:8px;padding:36px 20px;color:#8a919c;font-size:14px;font-family:"Figtree",sans-serif;line-height:1.4}
+.ap-fig.esq{float:left;margin:4px 24px 12px 0}
+.ap-fig.dir{float:right;margin:4px 0 12px 24px}
+.ap-fig.esq figcaption,.ap-fig.dir figcaption{text-align:left}
+.ap-fig.total{width:auto!important;margin-left:-64px;margin-right:-64px}
+.ap-fig.total img{border-radius:0}
+.ap-fig.total figcaption{padding:0 64px}
+.ap-b-nenhuma img{border-radius:0}
+.ap-b-arred img{border-radius:14px}
+.ap-b-moldura img{border:7px solid #fff;box-shadow:0 0 0 1px #d6dae0,0 6px 16px rgba(0,0,0,.12);border-radius:2px;box-sizing:border-box}
+.ap-b-circulo img{border-radius:50%;aspect-ratio:1;object-fit:cover}
+.ap-h1,.ap-h2,.ap-q,.ap-tab,.ap-quebra,.ap-gal,.ap-it,.ap-sumario,.ap-gab,.ap-aluno{clear:both}
+.ap-gal{display:grid;gap:16px;margin:18px 0}
+.ap-gal .ap-fig{margin:0;width:auto}
+.ap-gal img{aspect-ratio:4/3;object-fit:cover}
+.ap-it{display:flex;gap:24px;align-items:flex-start;margin:18px 0}
+.ap-it.dir{flex-direction:row-reverse}
+.ap-it .ap-fig{flex:none;margin:0}
+.ap-it .ap-fig figcaption{text-align:left}
+.ap-it .t{flex:1;min-width:0}
+.ap-it .t p:last-child{margin-bottom:0}
+.exportando .ap-fig.vazia{display:none}
+.ap-capa-img{margin-top:30px}
+.ap-capa-img img{width:100%;max-height:360px;object-fit:cover;border-radius:12px;display:block}
+.ap-capa.fundo{background-size:cover;background-position:center}
+.ap-capa .veu{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,22,.55) 0%,rgba(10,14,22,.25) 40%,rgba(10,14,22,.8) 100%)}
+.ap-capa.fundo > *:not(.veu){position:relative}
+.ap-capa.fundo .ap-capa-topo,.ap-capa.fundo h1,.ap-capa.fundo .ap-capa-sub,.ap-capa.fundo .ap-capa-base,.ap-capa.fundo .ap-capa-base b{color:#fff}
+.ap-capa.fundo .ap-capa-base{border-top-color:rgba(255,255,255,.4)}
+.ap-capa.fundo .ap-capa-faixa{position:absolute}
+.ap-tab{width:100%;border-collapse:collapse;margin:14px 0 18px;font-size:14.5px}
+.ap-tab th{background:var(--ap);color:#fff;text-align:left;padding:8px 12px;font-family:var(--ap-tit)}
+.ap-tab td{padding:8px 12px;border-bottom:1px solid #dde1e7}
+.ap-tab tr:nth-child(even) td{background:#f6f7f9}
+.ap-q{margin:18px 0 20px}
+.ap-q-n{font-family:var(--ap-tit);font-weight:700;color:var(--ap);font-size:14px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.ap-q-enun{margin-bottom:8px}
+.ap-linha{border-bottom:1px solid #aab0ba;height:30px}
+.ap-alts{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.ap-alts li{display:flex;gap:10px;align-items:flex-start}
+.ap-alts .l{flex:none;width:24px;height:24px;border:1.5px solid #9aa1ac;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-family:var(--ap-tit);margin-top:1px}
+.ap-vf{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.ap-vf li{display:flex;gap:10px}
+.ap-vf .p{flex:none;font-family:var(--ap-tit);color:#5a6270}
+.ap-quebra{border-top:2px dashed #c9ced6;margin:30px -64px;position:relative;height:0}
+.ap-quebra::after{content:"quebra de página";position:absolute;left:50%;top:-10px;transform:translateX(-50%);background:#fff;padding:0 8px;font:600 11px "Figtree",sans-serif;color:#8a919c;text-transform:uppercase;letter-spacing:.06em}
+.exportando .ap-quebra{border:0;margin:0}
+.exportando .ap-quebra::after{display:none}
+.ap-gab{margin-top:10px}
+.ap-gab h2{font-family:var(--ap-tit);font-size:24px;color:#141821;margin:0 0 12px}
+.ap-gab ol{list-style:none;padding:0;margin:0;columns:2;column-gap:30px}
+.ap-gab li{break-inside:avoid;padding:5px 0;border-bottom:1px dotted #c9ced6;font-size:14.5px}
+.ap-gab li b{color:var(--ap);font-family:var(--ap-tit);margin-right:6px}
+.ap-bloco{break-inside:avoid}
+</style>
+</head>
+<body data-vista="editar">
+
+<header class="topo">
+  <div class="marca"><i aria-hidden="true"></i>Criador de Apostilas</div>
+  <div class="acoes">
+    <button class="btn ia" id="b-ia">✦ Criar com IA</button>
+    <button class="btn" id="b-instalar" hidden>⤓ Instalar app</button>
+    <button class="btn" id="b-painel" hidden>Painel admin</button>
+    <button class="btn" id="b-nova">Nova</button>
+    <button class="btn" id="b-abrir">Abrir projeto</button>
+    <button class="btn" id="b-salvar">Salvar projeto</button>
+    <button class="btn" id="b-html">Baixar HTML</button>
+    <button class="btn pri" id="b-pdf">Baixar PDF</button>
+  </div>
+  <input type="file" id="f-abrir" accept=".json,application/json" hidden>
+</header>
+
+<main class="principal">
+  <section class="editor" aria-label="Edição">
+    <div class="abas" role="tablist">
+      <button role="tab" id="t-cont" aria-selected="true" aria-controls="p-cont">Conteúdo</button>
+      <button role="tab" id="t-capa" aria-selected="false" aria-controls="p-capa">Capa e estilo</button>
+    </div>
+    <div class="rolagem">
+      <div class="painel" id="p-cont" role="tabpanel"><div id="lista-blocos"></div></div>
+      <div class="painel" id="p-capa" role="tabpanel" hidden>
+        <h3 class="sec">Capa</h3>
+        <div class="campo"><label for="c-titulo">Título da apostila</label><input type="text" id="c-titulo" data-capa="titulo"></div>
+        <div class="campo"><label for="c-subtitulo">Subtítulo</label><input type="text" id="c-subtitulo" data-capa="subtitulo"></div>
+        <div class="linha2">
+          <div class="campo"><label for="c-disciplina">Disciplina</label><input type="text" id="c-disciplina" data-capa="disciplina"></div>
+          <div class="campo"><label for="c-turma">Série / turma</label><input type="text" id="c-turma" data-capa="turma"></div>
+        </div>
+        <div class="campo"><label for="c-autor">Professor(a) / autor(a)</label><input type="text" id="c-autor" data-capa="autor"></div>
+        <div class="linha2">
+          <div class="campo"><label for="c-instituicao">Escola / instituição</label><input type="text" id="c-instituicao" data-capa="instituicao"></div>
+          <div class="campo"><label for="c-ano">Ano / período</label><input type="text" id="c-ano" data-capa="ano"></div>
+        </div>
+        <h3 class="sec">Imagem da capa</h3>
+        <div id="capa-img"></div>
+        <div class="campo"><label for="c-imagemEstilo">Como mostrar</label><select id="c-imagemEstilo" data-capa="imagemEstilo"><option value="destaque">Abaixo do título</option><option value="fundo">Fundo da capa inteira</option></select></div>
+        <h3 class="sec">Estilo</h3>
+        <span class="rot">Cor principal</span>
+        <div class="cores" id="cores"></div>
+        <span class="rot">Tipografia</span>
+        <div class="estilos" id="estilos"></div>
+        <h3 class="sec">Elementos</h3>
+        <label class="chk"><input type="checkbox" id="c-mostrarCapa" data-capa="mostrarCapa"> Página de capa</label>
+        <label class="chk"><input type="checkbox" id="c-sumario" data-capa="sumario"> Sumário automático</label>
+        <label class="chk"><input type="checkbox" id="c-cabecalho" data-capa="cabecalho"> Cabeçalho do aluno (nome, turma, data)</label>
+        <label class="chk"><input type="checkbox" id="c-gabarito" data-capa="gabarito"> Gabarito no final</label>
+        <label class="chk"><input type="checkbox" id="c-numeros" data-capa="numeros"> Número de página no PDF</label>
+        <label class="chk"><input type="checkbox" id="c-numFig" data-capa="numFig"> Numerar figuras (Figura 1, Figura 2…)</label>
+      </div>
+    </div>
+    <div class="add-fim">
+      <button class="btn pri" id="b-add">+ Adicionar bloco</button>
+      <button class="btn ia" id="b-ia-secao">✦ Seção com IA</button>
+    </div>
+  </section>
+
+  <section class="visual" aria-label="Pré-visualização">
+    <div class="visual-info"><span id="info-cont"></span><span>Pré-visualização A4 · salvo neste navegador</span></div>
+    <div class="zoom-caixa" id="zoom-caixa"><div class="zoom" id="zoom"></div></div>
+  </section>
+</main>
+
+<nav class="mob-abas" role="tablist">
+  <button role="tab" id="m-editar" aria-selected="true">Editar</button>
+  <button role="tab" id="m-ver" aria-selected="false">Ver apostila</button>
+</nav>
+
+<div class="modal-fundo" id="modal" hidden><div class="modal" role="dialog" aria-modal="true" id="modal-caixa"></div></div>
+<div class="aviso" id="aviso" role="status" hidden></div>
+<div class="soltar" id="soltar" hidden>Solte a imagem para adicioná-la à apostila</div>
+
+<section class="painel-tela" id="painel" hidden aria-label="Painel do administrador">
+  <div class="p-topo"><h2>Painel do administrador</h2><button class="btn" id="p-fechar">Voltar ao app</button></div>
+  <div class="p-corpo"><div class="p-int">
+    <div class="tiles" id="p-tiles"></div>
+    <div class="cartao">
+      <h3>Regras de acesso</h3>
+      <div class="cfg-grade">
+        <div class="campo"><label for="p-modo">Quem pode usar o app</label><select id="p-modo"><option value="aberto">Qualquer pessoa com o link</option><option value="aprovacao">Só quem eu liberar</option></select></div>
+        <div class="campo"><label for="p-limite">Créditos de IA automática por pessoa</label><input type="number" id="p-limite" min="0" step="1"></div>
+      </div>
+      <p class="dica-campo" style="margin:0">Créditos em 0 = sem limite. Cada apostila ou ilustração gerada no modo automático gasta 1 crédito; o modo semiautomático é sempre ilimitado. Para convidar alguém, use o botão de compartilhar desta página no claude.ai com a permissão <b>Colaborador</b>. A pessoa aparece aqui na primeira vez que abrir o app.</p>
+    </div>
+    <div class="cartao">
+      <h3>Usuários</h3>
+      <div class="filtros">
+        <input type="search" id="p-busca" placeholder="Buscar por nome" aria-label="Buscar usuário">
+        <select id="p-filtro" aria-label="Filtrar por situação"><option value="todos">Todos</option><option value="pendente">Aguardando</option><option value="liberado">Liberados</option><option value="bloqueado">Bloqueados</option></select>
+      </div>
+      <div id="p-lista"></div>
+    </div>
+  </div></div>
+</section>
+
+<div class="trava" id="trava" hidden><div class="modal"><h2 id="trava-tit"></h2><p class="sub" id="trava-msg" style="margin:8px 0 0"></p></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/==(.+?)==/g,'<mark>$1</mark>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g,'$1<em>$2</em>');
+const paras = s => String(s||'').split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean).map(p=>`<p>${fmt(p).replace(/\n/g,'<br>')}</p>`).join('');
+const linhas = s => String(s||'').split('\n').map(l=>l.trim()).filter(Boolean);
+const LETRAS = 'abcdefghij';
+
+const CORES = [['#2747d6','Cobalto'],['#1f7a4d','Verde'],['#9b2335','Vinho'],['#d9622b','Laranja'],['#6b3fa0','Roxo'],['#0e7c86','Petróleo'],['#33373d','Grafite']];
+const ESTILOS = [['classica','Aa','Clássica'],['moderna','Aa','Moderna'],['infantil','Aa','Infantil']];
+const BOXES = [['dica','Dica'],['atencao','Atenção'],['curiosidade','Curiosidade'],['definicao','Definição']];
+
+const TIPOS = {
+  titulo:   {nome:'Título de seção', desc:'Numerado e vai para o sumário', cor:'#2747d6', novo:()=>({texto:'Nova seção'})},
+  subtitulo:{nome:'Subtítulo', desc:'Divide a seção em partes', cor:'#4f6bed', novo:()=>({texto:'Subtítulo'})},
+  texto:    {nome:'Parágrafo', desc:'Texto corrido', cor:'#5d6878', novo:()=>({texto:''})},
+  lista:    {nome:'Lista', desc:'Tópicos ou passos', cor:'#5d6878', novo:()=>({itens:'Primeiro item\nSegundo item', numerada:false})},
+  destaque: {nome:'Caixa de destaque', desc:'Dica, atenção, curiosidade', cor:'#1f7a4d', novo:()=>({estilo:'dica', titulo:'Dica', texto:''})},
+  imagem:   {nome:'Imagem', desc:'Centralizada ou com texto contornando', cor:'#0e7c86', novo:()=>({src:'', legenda:'', largura:70, posicao:'centro', borda:'arred', sugestao:''})},
+  imgtexto: {nome:'Imagem + texto', desc:'Imagem de um lado, texto do outro', cor:'#0e7c86', novo:()=>({src:'', legenda:'', texto:'', lado:'esq', largura:40, borda:'arred', sugestao:''})},
+  galeria:  {nome:'Galeria', desc:'2 a 4 imagens lado a lado', cor:'#0e7c86', novo:()=>({colunas:3, borda:'arred', imagens:[{src:'',legenda:''},{src:'',legenda:''},{src:'',legenda:''}]})},
+  tabela:   {nome:'Tabela', desc:'Dados em colunas', cor:'#0e7c86', novo:()=>({dados:'Coluna A | Coluna B\nValor 1 | Valor 2'})},
+  aberta:   {nome:'Questão aberta', desc:'Com linhas para responder', cor:'#d9622b', novo:()=>({enunciado:'', linhas:4, resposta:''})},
+  multipla: {nome:'Múltipla escolha', desc:'Alternativas a, b, c…', cor:'#d9622b', novo:()=>({enunciado:'', alternativas:'*Alternativa correta\nAlternativa\nAlternativa\nAlternativa'})},
+  vf:       {nome:'Verdadeiro ou falso', desc:'Afirmações para julgar', cor:'#d9622b', novo:()=>({enunciado:'Marque V para verdadeiro e F para falso.', itens:'V: Afirmação verdadeira\nF: Afirmação falsa'})},
+  quebra:   {nome:'Quebra de página', desc:'Começa uma nova folha', cor:'#9aa1ac', novo:()=>({})},
+};
+
+function ilustracaoCiclo(){
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" width="1280" height="760" font-family="Arial, sans-serif">
+<defs><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe3ff"/><stop offset="1" stop-color="#eef8ff"/></linearGradient>
+<marker id="m" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1d3f8f"/></marker></defs>
+<rect width="640" height="380" fill="url(#c)"/>
+<circle cx="78" cy="70" r="34" fill="#ffc83d"/><g stroke="#ffc83d" stroke-width="5" stroke-linecap="round"><path d="M78 18v-12M78 134v-12M26 70h-12M142 70h-12M41 33l-8-8M123 115l-8-8M41 107l-8 8M123 25l-8 8"/></g>
+<g fill="#fff" stroke="#9fb6d6" stroke-width="2"><circle cx="300" cy="78" r="30"/><circle cx="340" cy="62" r="38"/><circle cx="384" cy="80" r="28"/><rect x="290" y="78" width="104" height="30" rx="15" stroke="none"/></g>
+<path d="M290 108h104" stroke="#9fb6d6" stroke-width="2"/>
+<polygon points="0,300 110,150 170,215 235,130 360,300" fill="#7a9a6a"/><polygon points="235,130 262,166 246,162 232,176 216,158" fill="#fff"/><polygon points="110,150 130,177 112,172 96,168" fill="#fff"/>
+<rect y="292" width="640" height="88" fill="#6fb35f"/>
+<path d="M360 300 Q420 286 640 284 L640 380 L330 380 Z" fill="#2f7fd1"/>
+<path d="M400 318q12-6 24 0t24 0t24 0M500 340q12-6 24 0t24 0t24 0" stroke="#bfe0ff" stroke-width="3" fill="none"/>
+<g stroke="#4a8fe0" stroke-width="3" stroke-linecap="round"><path d="M300 122l-8 22M326 122l-8 22M352 122l-8 22M378 122l-8 22M312 156l-8 22M338 156l-8 22M364 156l-8 22"/></g>
+<g fill="none" stroke="#1d3f8f" stroke-width="3" marker-end="url(#m)"><path d="M520 270 C500 220 540 180 470 110"/><path d="M200 330 C260 345 320 340 380 320"/><path d="M420 70 C460 60 480 70 500 90" stroke-dasharray="6 6" marker-end="none" marker-start="url(#m)"/></g>
+<g font-size="17" font-weight="700" fill="#14213d"><text x="530" y="200">Evaporação</text><text x="404" y="38">Condensação</text><text x="180" y="210" fill="#fff" stroke="#14213d" stroke-width="4" paint-order="stroke">Precipitação</text><text x="190" y="368" fill="#fff" stroke="#14213d" stroke-width="4" paint-order="stroke">Escoamento</text></g>
+</svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+}
+
+function exemplo(){
+  const b = (tipo, o) => ({id:uid(), tipo, ...o});
+  return {
+    capa:{titulo:'O Ciclo da Água', subtitulo:'Como a água se transforma e circula pelo planeta', disciplina:'Ciências', turma:'6º ano', autor:'Prof.ª Marina Souza', instituicao:'Escola Municipal Monteiro Lobato', ano:'2º bimestre · 2026', cor:'#2747d6', fonte:'classica', mostrarCapa:true, sumario:true, cabecalho:true, gabarito:true, numeros:true, numFig:true, imagem:'', imagemEstilo:'destaque'},
+    blocos:[
+      b('titulo',{texto:'A água no planeta'}),
+      b('texto',{texto:'Cerca de **97%** da água da Terra está nos oceanos e é salgada. Apenas uma pequena parte é doce, e a maior porção dela está congelada nas geleiras e calotas polares.\n\nMesmo assim, a quantidade total de água do planeta praticamente não muda: ela apenas ==muda de estado físico e de lugar==, num movimento contínuo chamado *ciclo da água*.'}),
+      b('destaque',{estilo:'definicao', titulo:'Definição', texto:'**Ciclo hidrológico** é o caminho que a água percorre entre a superfície terrestre, a atmosfera e os seres vivos, impulsionado pela energia do Sol.'}),
+      b('titulo',{texto:'As etapas do ciclo'}),
+      b('imagem',{src:ilustracaoCiclo(), legenda:'Representação simplificada do ciclo da água.', largura:90, posicao:'centro', borda:'moldura', sugestao:''}),
+      b('lista',{numerada:true, itens:'**Evaporação:** o calor do Sol transforma a água líquida de rios e mares em vapor.\n**Transpiração:** as plantas liberam vapor de água pelas folhas.\n**Condensação:** o vapor esfria nas camadas altas e forma as nuvens.\n**Precipitação:** a água volta à superfície como chuva, granizo ou neve.\n**Infiltração e escoamento:** a água penetra no solo ou corre para rios e mares.'}),
+      b('tabela',{dados:'Etapa | Mudança de estado | Onde acontece\nEvaporação | Líquido → gasoso | Oceanos, rios, lagos\nCondensação | Gasoso → líquido | Atmosfera (nuvens)\nSolidificação | Líquido → sólido | Topo de montanhas, polos'}),
+      b('imgtexto',{src:'', sugestao:'Foto de uma geleira ou do topo de uma montanha com neve', legenda:'', lado:'dir', largura:38, borda:'arred', texto:'As **geleiras** funcionam como grandes reservatórios de água doce. Quando a temperatura sobe, parte do gelo derrete e abastece rios e lagos.\n\nPor isso, o aquecimento do planeta afeta diretamente a quantidade de água disponível para as cidades e para a agricultura.'}),
+      b('destaque',{estilo:'curiosidade', titulo:'Você sabia?', texto:'Uma mesma molécula de água pode ficar milhares de anos presa numa geleira, mas apenas cerca de 9 dias na atmosfera.'}),
+      b('quebra',{}),
+      b('titulo',{texto:'Atividades'}),
+      b('multipla',{enunciado:'Qual etapa do ciclo da água é responsável pela formação das nuvens?', alternativas:'Evaporação\n*Condensação\nInfiltração\nEscoamento'}),
+      b('vf',{enunciado:'Marque V para verdadeiro e F para falso.', itens:'V: A energia do Sol movimenta o ciclo da água.\nF: A maior parte da água doce está nos rios.\nV: As plantas também participam do ciclo pela transpiração.'}),
+      b('aberta',{enunciado:'Explique, com suas palavras, por que a quantidade de água do planeta permanece praticamente a mesma ao longo do tempo.', linhas:5, resposta:'Porque a água não é criada nem destruída no ciclo: ela apenas muda de estado e de lugar.'}),
+      b('destaque',{estilo:'atencao', titulo:'Para casa', texto:'Observe um copo com gelo por 10 minutos e anote o que aparece do lado de fora. Qual etapa do ciclo isso representa?'}),
+    ]
+  };
+}
+
+/* Armazenamento: IndexedDB (cabe muitas imagens); localStorage como reserva */
+let dbP = null;
+function idb(){
+  if (!dbP) dbP = new Promise((ok, err)=>{ try { const r = indexedDB.open('criador-apostilas', 1);
+    r.onupgradeneeded = ()=>r.result.createObjectStore('kv'); r.onsuccess = ()=>ok(r.result); r.onerror = ()=>err(r.error); } catch(e){ err(e); } });
+  return dbP;
+}
+async function idbGet(k){ const d = await idb(); return new Promise(ok=>{ const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = ()=>ok(q.result); q.onerror = ()=>ok(null); }); }
+async function idbSet(k, v){ const d = await idb(); return new Promise((ok, err)=>{ const t = d.transaction('kv','readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = ()=>err(t.error); }); }
+const valido = s => s && s.capa && Array.isArray(s.blocos);
+let st = exemplo();
+let tSalvar, avisouCheio = false;
+function salvarLocal(){
+  clearTimeout(tSalvar);
+  tSalvar = setTimeout(async ()=>{
+    const json = JSON.stringify(st);
+    try { await idbSet('apostila', json); return; } catch(e) {}
+    try { localStorage.setItem('apostila-v1', json); }
+    catch(e){ if (!avisouCheio){ avisouCheio = true; aviso('O navegador não tem espaço para guardar tudo. Use “Salvar projeto” para não perder as imagens.'); } }
+  }, 300);
+}
+async function carregarSalvo(){
+  let s = null;
+  try { const j = await Promise.race([idbGet('apostila'), new Promise(ok=>setTimeout(()=>ok(null), 1500))]); if (j) s = JSON.parse(j); } catch(e) {}
+  if (!valido(s)) { try { s = JSON.parse(localStorage.getItem('apostila-v1')); } catch(e) {} }
+  if (valido(s)) st = {capa:{numFig:true, imagem:'', imagemEstilo:'destaque', ...s.capa}, blocos:s.blocos};
+}
+
+/* ---------- Renderização da apostila ---------- */
+function renderDoc(s){
+  const c = s.capa; const cor = c.cor || '#2747d6'; const fonte = 'ap-' + (c.fonte||'classica');
+  const titulos = s.blocos.filter(b=>b.tipo==='titulo');
+  let sec=0, q=0, fig=0; const gab=[]; let corpo='';
+  const figura = (src, legenda, sugestao, classes='', estilo='') => {
+    let cap = legenda ? fmt(legenda) : '';
+    if (src && c.numFig) { fig++; cap = `<b>Figura ${fig}${legenda?' –':''}</b> ${cap}`; }
+    const ph = `<div class="ph">Imagem ainda não escolhida${sugestao?`<br><b>Sugestão:</b> ${esc(sugestao)}`:''}</div>`;
+    return `<figure class="ap-fig ap-bloco ${src?'':'vazia'} ${classes}" style="${estilo}">${src?`<img src="${src}" alt="${esc(legenda||sugestao)}">`:ph}${cap&&(src||legenda)?`<figcaption>${cap}</figcaption>`:''}</figure>`;
+  };
+  if (c.cabecalho) corpo += `<div class="ap-aluno"><div>Nome<span></span></div><div>Turma<span></span></div><div>Data<span></span></div></div>`;
+  if (c.sumario && titulos.length) corpo += `<div class="ap-sumario ap-bloco"><h2>Sumário</h2><ol>${titulos.map((t,i)=>`<li><b>${i+1}</b>${fmt(t.texto)}</li>`).join('')}</ol></div><div class="ap-quebra html2pdf__page-break"></div>`;
+  for (const b of s.blocos){
+    switch(b.tipo){
+      case 'titulo': sec++; corpo += `<h2 class="ap-h1 ap-bloco"><span class="n">${sec}</span><span>${fmt(b.texto)}</span></h2>`; break;
+      case 'subtitulo': corpo += `<h3 class="ap-h2 ap-bloco">${fmt(b.texto)}</h3>`; break;
+      case 'texto': corpo += `<div class="ap-txt">${paras(b.texto)}</div>`; break;
+      case 'lista': { const t = b.numerada?'ol class="ap-lista"':'ul'; corpo += `<${t}>${linhas(b.itens).map(i=>`<li>${fmt(i)}</li>`).join('')}</${b.numerada?'ol':'ul'}>`; break; }
+      case 'destaque': corpo += `<div class="ap-box ap-bloco ${esc(b.estilo)}">${b.titulo?`<h4>${esc(b.titulo)}</h4>`:''}${paras(b.texto)}</div>`; break;
+      case 'imagem': { const pos = b.posicao||'centro'; const lg = Math.max(15,Math.min(100,+b.largura||70));
+        const w = pos==='total' ? '' : `width:${pos==='centro'?lg:Math.min(lg,60)}%`;
+        corpo += figura(b.src, b.legenda, b.sugestao, `${pos} ap-b-${b.borda||'arred'}`, w); break; }
+      case 'imgtexto': { const lg = Math.max(20,Math.min(60,+b.largura||40));
+        corpo += `<div class="ap-it ap-bloco ${b.lado==='dir'?'dir':''}">${figura(b.src, b.legenda, b.sugestao, `ap-b-${b.borda||'arred'}`, `width:${lg}%`)}<div class="t">${paras(b.texto)}</div></div>`; break; }
+      case 'galeria': { const col = Math.max(2,Math.min(4,+b.colunas||3)); const ims = (b.imagens||[]);
+        corpo += `<div class="ap-gal ap-bloco ap-b-${b.borda||'arred'}" style="grid-template-columns:repeat(${col},1fr)">${ims.map(im=>figura(im.src, im.legenda, '', '', '')).join('')}</div>`; break; }
+      case 'tabela': { const r = linhas(b.dados).map(l=>l.split('|').map(x=>x.trim())); if(!r.length) break;
+        corpo += `<table class="ap-tab ap-bloco"><thead><tr>${r[0].map(h=>`<th>${fmt(h)}</th>`).join('')}</tr></thead><tbody>${r.slice(1).map(l=>`<tr>${r[0].map((_,i)=>`<td>${fmt(l[i]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table>`; break; }
+      case 'aberta': q++; corpo += `<div class="ap-q ap-bloco"><div class="ap-q-n">Questão ${q}</div><div class="ap-q-enun">${paras(b.enunciado)||'<p>…</p>'}</div>${'<div class="ap-linha"></div>'.repeat(Math.max(0,Math.min(20,+b.linhas||0)))}</div>`;
+        if (b.resposta) gab.push([q, fmt(b.resposta)]); break;
+      case 'multipla': { q++; const alts = linhas(b.alternativas); let certa=-1;
+        const lis = alts.map((a,i)=>{ if(a.startsWith('*')){certa=i;a=a.slice(1).trim();} return `<li><span class="l">${LETRAS[i]||'?'}</span><span>${fmt(a)}</span></li>`; }).join('');
+        corpo += `<div class="ap-q ap-bloco"><div class="ap-q-n">Questão ${q}</div><div class="ap-q-enun">${paras(b.enunciado)||'<p>…</p>'}</div><ol class="ap-alts">${lis}</ol></div>`;
+        if (certa>=0) gab.push([q, `Alternativa <strong>${LETRAS[certa]}</strong>`]); break; }
+      case 'vf': { q++; const its = linhas(b.itens).map(l=>{ const m=l.match(/^([VFvf])\s*[:\-)]\s*(.*)$/); return m?{v:m[1].toUpperCase(),t:m[2]}:{v:'',t:l}; });
+        corpo += `<div class="ap-q ap-bloco"><div class="ap-q-n">Questão ${q}</div><div class="ap-q-enun">${paras(b.enunciado)}</div><ul class="ap-vf">${its.map(i=>`<li><span class="p">(&nbsp;&nbsp;&nbsp;)</span><span>${fmt(i.t)}</span></li>`).join('')}</ul></div>`;
+        if (its.some(i=>i.v)) gab.push([q, its.map(i=>i.v||'?').join(', ')]); break; }
+      case 'quebra': corpo += `<div class="ap-quebra html2pdf__page-break"></div>`; break;
+    }
+  }
+  if (c.gabarito && gab.length) corpo += `<div class="ap-quebra html2pdf__page-break"></div><div class="ap-gab"><h2>Gabarito</h2><ol>${gab.map(([n,t])=>`<li><b>${n}.</b>${t}</li>`).join('')}</ol></div>`;
+  const fundo = c.imagem && c.imagemEstilo==='fundo';
+  const capa = c.mostrarCapa ? `<section class="ap-folha ap-capa ${fonte} ${fundo?'fundo':''}" style="--ap:${cor};${fundo?`background-image:url('${c.imagem}')`:''}">${fundo?'<div class="veu"></div>':''}<div class="ap-capa-faixa"></div><div class="ap-capa-topo">${esc(c.instituicao)}</div><div class="ap-capa-meio">${(c.disciplina||c.turma)?`<div class="ap-capa-disc">${esc([c.disciplina,c.turma].filter(Boolean).join(' · '))}</div>`:''}<h1>${esc(c.titulo||'Sem título')}</h1>${c.subtitulo?`<p class="ap-capa-sub">${esc(c.subtitulo)}</p>`:''}<div class="ap-capa-linha"></div>${c.imagem&&!fundo?`<div class="ap-capa-img"><img src="${c.imagem}" alt=""></div>`:''}</div><div class="ap-capa-base"><div>${c.autor?`<b>${esc(c.autor)}</b>`:''}${c.autor?'Material didático':''}</div><div>${esc(c.ano)}</div></div></section>` : '';
+  return {capa, corpo:`<section class="ap-folha ap-conteudo ${fonte}" style="--ap:${cor}">${corpo}</section>`, perguntas:q, secoes:sec};
+}
+
+let tPrev;
+function preview(){
+  clearTimeout(tPrev);
+  tPrev = setTimeout(()=>{
+    const d = renderDoc(st);
+    $('#zoom').innerHTML = d.capa + d.corpo;
+    $('#info-cont').textContent = `${d.secoes} ${d.secoes===1?'seção':'seções'} · ${d.perguntas} ${d.perguntas===1?'questão':'questões'}`;
+    ajustarZoom();
+  }, 120);
+}
+function ajustarZoom(){
+  const vis = $('.visual'); const z = $('#zoom');
+  const w = vis.clientWidth - 32; const k = Math.min(1, w/794);
+  z.style.transform = `scale(${k})`;
+  $('#zoom-caixa').style.width = (794*k)+'px';
+  $('#zoom-caixa').style.height = (z.scrollHeight*k)+'px';
+}
+new ResizeObserver(ajustarZoom).observe($('.visual'));
+
+/* ---------- Editor de blocos ---------- */
+const inp = (b,f,rot,ph='') => `<div class="campo"><label for="i-${b.id}-${f}">${rot}</label><input type="text" id="i-${b.id}-${f}" data-id="${b.id}" data-f="${f}" value="${esc(b[f])}" placeholder="${esc(ph)}"></div>`;
+const area = (b,f,rot,ph='',dica='') => `<div class="campo"><label for="i-${b.id}-${f}">${rot}</label><textarea id="i-${b.id}-${f}" data-id="${b.id}" data-f="${f}" placeholder="${esc(ph)}" rows="${Math.min(10,Math.max(3,String(b[f]||'').split('\n').length+1))}">${esc(b[f])}</textarea></div>${dica?`<p class="dica-campo">${dica}</p>`:''}`;
+const sel = (b,f,rot,ops) => `<div class="campo"><label for="i-${b.id}-${f}">${rot}</label><select id="i-${b.id}-${f}" data-id="${b.id}" data-f="${f}">${ops.map(([v,n])=>`<option value="${v}" ${String(b[f])===v?'selected':''}>${n}</option>`).join('')}</select></div>`;
+const faixa = (b,f,rot,min,max) => `<div class="campo"><label for="i-${b.id}-${f}" data-rot="${rot}">${rot}: ${b[f]}%</label><input type="range" min="${min}" max="${max}" step="5" id="i-${b.id}-${f}" data-id="${b.id}" data-f="${f}" value="${b[f]}"></div>`;
+const POSICOES = [['centro','Centralizada'],['esq','À esquerda, texto contorna'],['dir','À direita, texto contorna'],['total','Largura total da folha']];
+const BORDAS = [['arred','Cantos arredondados'],['nenhuma','Cantos retos'],['moldura','Moldura com sombra'],['circulo','Círculo']];
+function seletorImg(alvo, src, sugestao){
+  const id = 'f-' + alvo.replace(/:/g,'-');
+  const botaoIA = iaDisp && alvo!=='capa' ? `<button class="btn peq ia" data-ilustrar="${alvo}">✦ Ilustrar com IA</button>` : '';
+  return `<div class="img-alvo" data-drop="${alvo}">${src?`<img class="thumb" src="${src}" alt="">`:'<div class="vz" aria-hidden="true">＋</div>'}
+  <div class="img-btns"><div class="fila"><label class="btn peq ${src?'':'pri'}" for="${id}">${src?'Trocar':'Escolher imagem'}</label><input type="file" accept="image/*" id="${id}" data-img="${alvo}" hidden>
+  ${src?`<button class="btn peq" data-rot="${alvo}" title="Girar 90°">Girar ↻</button><button class="btn peq perigo" data-rem="${alvo}">Remover</button>`:botaoIA}</div>
+  <small>${src?'':(sugestao?`Sugestão: ${esc(sugestao)}. `:'')}Arraste uma imagem aqui ou cole com Ctrl+V.</small></div></div>`;
+}
+const DICA_FMT ='Use **negrito**, *itálico* e ==marca-texto==. Linha em branco separa parágrafos.';
+
+function campos(b){
+  switch(b.tipo){
+    case 'titulo': case 'subtitulo': return inp(b,'texto','Texto');
+    case 'texto': return area(b,'texto','Texto','Escreva o conteúdo…',DICA_FMT);
+    case 'lista': return area(b,'itens','Itens','Um item por linha','Um item por linha.') + `<label class="chk"><input type="checkbox" data-id="${b.id}" data-f="numerada" ${b.numerada?'checked':''}> Lista numerada</label>`;
+    case 'destaque': return `<div class="linha2"><div class="campo"><label for="i-${b.id}-estilo">Tipo</label><select id="i-${b.id}-estilo" data-id="${b.id}" data-f="estilo">${BOXES.map(([v,n])=>`<option value="${v}" ${b.estilo===v?'selected':''}>${n}</option>`).join('')}</select></div>${inp(b,'titulo','Título da caixa')}</div>` + area(b,'texto','Texto','',DICA_FMT);
+    case 'imagem': return seletorImg('b:'+b.id, b.src, b.sugestao) + `<div class="linha2">${sel(b,'posicao','Posição',POSICOES)}${sel(b,'borda','Acabamento',BORDAS)}</div>` + ((b.posicao||'centro')==='total'?'':faixa(b,'largura','Largura',15,100)) + inp(b,'legenda','Legenda','Ex.: Mapa do Brasil');
+    case 'imgtexto': return seletorImg('b:'+b.id, b.src, b.sugestao) + `<div class="linha2">${sel(b,'lado','Imagem à',[['esq','Esquerda'],['dir','Direita']])}${sel(b,'borda','Acabamento',BORDAS)}</div>` + faixa(b,'largura','Largura da imagem',20,60) + inp(b,'legenda','Legenda') + area(b,'texto','Texto ao lado','',DICA_FMT);
+    case 'galeria': return `<div class="linha2">${sel(b,'colunas','Colunas',[['2','2 por linha'],['3','3 por linha'],['4','4 por linha']])}${sel(b,'borda','Acabamento',BORDAS)}</div>` +
+      (b.imagens||[]).map((im,k)=>`<div class="gal-item"><div class="rot"><span>Imagem ${k+1}</span><button class="btn peq perigo" data-galrem="${b.id}:${k}">Remover</button></div>${seletorImg(`g:${b.id}:${k}`, im.src)}<div class="campo"><label for="g-${b.id}-${k}">Legenda</label><input type="text" id="g-${b.id}-${k}" data-gal="${b.id}" data-idx="${k}" value="${esc(im.legenda)}"></div></div>`).join('') +
+      `<button class="btn peq" data-galadd="${b.id}" style="margin-bottom:12px">+ Mais uma imagem</button>`;
+    case 'tabela': return area(b,'dados','Linhas da tabela','','A primeira linha é o cabeçalho. Separe as colunas com | (barra vertical).');
+    case 'aberta': return area(b,'enunciado','Enunciado') + `<div class="linha2"><div class="campo"><label for="i-${b.id}-linhas">Linhas para resposta</label><input type="number" min="0" max="20" id="i-${b.id}-linhas" data-id="${b.id}" data-f="linhas" value="${b.linhas}"></div></div>` + inp(b,'resposta','Resposta esperada (gabarito)','Opcional');
+    case 'multipla': return area(b,'enunciado','Enunciado') + area(b,'alternativas','Alternativas','','Uma por linha. Comece a correta com * para ela entrar no gabarito.');
+    case 'vf': return area(b,'enunciado','Instrução') + area(b,'itens','Afirmações','','Uma por linha, começando com V: ou F: (a letra só aparece no gabarito).');
+    case 'quebra': return `<p class="dica-campo" style="margin:0 0 10px">O conteúdo seguinte começa numa nova página do PDF.</p>`;
+  }
+  return '';
+}
+
+function renderEditor(){
+  const el = $('#lista-blocos');
+  if (!st.blocos.length){ el.innerHTML = `<div class="vazio">A apostila está vazia.<br>Adicione um bloco abaixo ou use “Criar com IA”.</div>`; preview(); return; }
+  el.innerHTML = st.blocos.map((b,i)=>`<div class="bloco ${b._rec?'recolhido':''}" data-bi="${i}" style="--cor-tipo:${TIPOS[b.tipo].cor}">
+    <div class="bloco-cab"><span class="tipo">${TIPOS[b.tipo].nome}</span>
+      <button class="ic" data-ac="rec" data-i="${i}" title="${b._rec?'Expandir':'Recolher'}" aria-label="${b._rec?'Expandir':'Recolher'}">${b._rec?'▸':'▾'}</button>
+      <button class="ic" data-ac="sobe" data-i="${i}" title="Mover para cima" aria-label="Mover para cima" ${i===0?'disabled':''}>↑</button>
+      <button class="ic" data-ac="desce" data-i="${i}" title="Mover para baixo" aria-label="Mover para baixo" ${i===st.blocos.length-1?'disabled':''}>↓</button>
+      <button class="ic" data-ac="ins" data-i="${i}" title="Inserir bloco abaixo" aria-label="Inserir bloco abaixo">+</button>
+      <button class="ic" data-ac="dup" data-i="${i}" title="Duplicar" aria-label="Duplicar">⧉</button>
+      <button class="ic" data-ac="del" data-i="${i}" title="Excluir" aria-label="Excluir">✕</button>
+    </div><div class="bloco-corpo">${campos(b)}</div></div>`).join('');
+  preview();
+}
+
+$('#lista-blocos').addEventListener('click', e=>{
+  const bt = e.target.closest('[data-ac]'); if(!bt) return;
+  const i = +bt.dataset.i; const a = bt.dataset.ac; const B = st.blocos;
+  if (a==='sobe' && i>0) [B[i-1],B[i]]=[B[i],B[i-1]];
+  else if (a==='desce' && i<B.length-1) [B[i+1],B[i]]=[B[i],B[i+1]];
+  else if (a==='dup') B.splice(i+1,0,{...JSON.parse(JSON.stringify(B[i])), id:uid()});
+  else if (a==='del') { const rem = B.splice(i,1)[0]; aviso(`${TIPOS[rem.tipo].nome} excluído.`, ()=>{ B.splice(i,0,rem); salvarLocal(); renderEditor(); }); }
+  else if (a==='rec') B[i]._rec = !B[i]._rec;
+  else if (a==='ins') { abrirPaleta(i+1); return; }
+  salvarLocal(); renderEditor();
+});
+document.addEventListener('input', e=>{
+  const t = e.target;
+  if (t.dataset.id){
+    const b = st.blocos.find(x=>x.id===t.dataset.id); if(!b) return;
+    const f = t.dataset.f;
+    b[f] = t.type==='checkbox' ? t.checked : (t.type==='number'||t.type==='range') ? +t.value : t.value;
+    if (t.type==='range'){ const l = t.previousElementSibling; l.textContent = `${l.dataset.rot}: ${t.value}%`; }
+    salvarLocal(); if (f==='posicao') renderEditor(); else preview();
+  } else if (t.dataset.gal){
+    const b = st.blocos.find(x=>x.id===t.dataset.gal); if(!b) return;
+    b.imagens[+t.dataset.idx].legenda = t.value; salvarLocal(); preview();
+  } else if (t.dataset.capa){
+    st.capa[t.dataset.capa] = t.type==='checkbox' ? t.checked : t.value;
+    salvarLocal(); preview();
+  }
+});
+/* ---------- Imagens ---------- */
+const carregarImg = src => new Promise((ok, err)=>{ const i = new Image(); i.onload = ()=>ok(i); i.onerror = err; i.src = src; });
+const lerArquivo = f => new Promise((ok, err)=>{ const r = new FileReader(); r.onload = ()=>ok(r.result); r.onerror = err; r.readAsDataURL(f); });
+async function prepararImagem(file){
+  if (!file || !/^image\//.test(file.type)) throw new Error('tipo');
+  const url = await lerArquivo(file);
+  if (file.type==='image/svg+xml' || (/png|gif|webp/.test(file.type) && file.size < 350000)) return url; // mantém transparência das ilustrações pequenas
+  const img = await carregarImg(url);
+  const max = 1600, k = Math.min(1, max/Math.max(img.width, img.height));
+  const cv = document.createElement('canvas'); cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+  const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(img,0,0,cv.width,cv.height);
+  return cv.toDataURL('image/jpeg', .86);
+}
+async function girar(src){
+  const img = await carregarImg(src);
+  const cv = document.createElement('canvas'); cv.width = img.naturalHeight || img.height; cv.height = img.naturalWidth || img.width;
+  const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height);
+  cx.translate(cv.width/2, cv.height/2); cx.rotate(Math.PI/2); cx.drawImage(img, -cv.height/2, -cv.width/2, cv.height, cv.width);
+  return cv.toDataURL('image/jpeg', .9);
+}
+function alvo(t){
+  const [k, id, idx] = t.split(':');
+  if (k==='capa') return {get:()=>st.capa.imagem, set:v=>{ st.capa.imagem = v; }, capa:true};
+  const b = st.blocos.find(x=>x.id===id); if (!b) return null;
+  if (k==='g') return {get:()=>b.imagens[+idx]?.src, set:v=>{ if (b.imagens[+idx]) b.imagens[+idx].src = v; }};
+  return {get:()=>b.src, set:v=>{ b.src = v; }};
+}
+function aplicarImg(t, src){ const a = alvo(t); if (!a) return; a.set(src); salvarLocal(); if (a.capa) renderCapa(); renderEditor(); }
+async function arquivoParaAlvo(t, file){
+  try { aplicarImg(t, await prepararImagem(file)); }
+  catch(e){ aviso('Não foi possível ler essa imagem. Tente um arquivo JPG ou PNG.'); }
+}
+async function novaImagemBloco(file, pos){
+  try { const src = await prepararImagem(file);
+    const nb = {id:uid(), tipo:'imagem', ...TIPOS.imagem.novo(), src};
+    st.blocos.splice(pos ?? st.blocos.length, 0, nb); salvarLocal(); aba('cont'); renderEditor(); aviso('Imagem adicionada à apostila.');
+    requestAnimationFrame(()=>document.querySelector(`[data-drop="b:${nb.id}"]`)?.scrollIntoView({block:'center'}));
+  } catch(e){ aviso('Não foi possível ler essa imagem. Tente um arquivo JPG ou PNG.'); }
+}
+document.addEventListener('change', e=>{
+  const t = e.target; if (!t.dataset.img || !t.files[0]) return;
+  arquivoParaAlvo(t.dataset.img, t.files[0]); t.value = '';
+});
+document.addEventListener('click', async e=>{
+  const r = e.target.closest('[data-rot]'), m = e.target.closest('[data-rem]'), ga = e.target.closest('[data-galadd]'), gr = e.target.closest('[data-galrem]');
+  if (r){ const a = alvo(r.dataset.rot); if (a && a.get()) { try { aplicarImg(r.dataset.rot, await girar(a.get())); } catch(_){ aviso('Não consegui girar essa imagem.'); } } }
+  else if (m){ const a = alvo(m.dataset.rem); if (!a) return; const antes = a.get(); aplicarImg(m.dataset.rem, ''); aviso('Imagem removida.', ()=>aplicarImg(m.dataset.rem, antes)); }
+  else if (ga){ const b = st.blocos.find(x=>x.id===ga.dataset.galadd); if (b){ b.imagens.push({src:'',legenda:''}); salvarLocal(); renderEditor(); } }
+  else if (gr){ const [id,k] = gr.dataset.galrem.split(':'); const b = st.blocos.find(x=>x.id===id); if (b){ b.imagens.splice(+k,1); salvarLocal(); renderEditor(); } }
+});
+/* arrastar e soltar */
+let contaArraste = 0;
+const temArquivo = e => e.dataTransfer && [...(e.dataTransfer.types||[])].includes('Files');
+document.addEventListener('dragenter', e=>{ if (!temArquivo(e)) return; contaArraste++; $('#soltar').hidden = false; });
+document.addEventListener('dragleave', e=>{ if (!temArquivo(e)) return; if (--contaArraste <= 0){ contaArraste = 0; $('#soltar').hidden = true; } });
+document.addEventListener('dragover', e=>{ if (!temArquivo(e)) return; e.preventDefault();
+  document.querySelectorAll('.img-alvo.sobre').forEach(x=>x.classList.remove('sobre'));
+  e.target.closest?.('[data-drop]')?.classList.add('sobre'); });
+document.addEventListener('drop', e=>{
+  if (!temArquivo(e)) return; e.preventDefault(); contaArraste = 0; $('#soltar').hidden = true;
+  document.querySelectorAll('.img-alvo.sobre').forEach(x=>x.classList.remove('sobre'));
+  const fs = [...e.dataTransfer.files].filter(f=>/^image\//.test(f.type)); if (!fs.length){ aviso('Solte um arquivo de imagem (JPG, PNG, WEBP, GIF ou SVG).'); return; }
+  const d = e.target.closest('[data-drop]');
+  if (d){ arquivoParaAlvo(d.dataset.drop, fs[0]); return; }
+  const bl = e.target.closest('.bloco'); let pos = bl ? +bl.dataset.bi + 1 : st.blocos.length;
+  fs.forEach(f=>novaImagemBloco(f, pos++));
+});
+/* colar com Ctrl+V */
+document.addEventListener('paste', e=>{
+  const f = [...(e.clipboardData?.files||[])].find(x=>/^image\//.test(x.type)); if (!f) return;
+  e.preventDefault();
+  const foco = document.activeElement;
+  const d = foco?.closest?.('[data-drop]') || foco?.closest?.('.bloco')?.querySelector('[data-drop]');
+  if (d && !alvo(d.dataset.drop)?.get()){ arquivoParaAlvo(d.dataset.drop, f); return; }
+  if (foco?.closest?.('#p-capa') && !st.capa.imagem){ arquivoParaAlvo('capa', f); return; }
+  const bl = foco?.closest?.('.bloco'); novaImagemBloco(f, bl ? +bl.dataset.bi + 1 : st.blocos.length);
+});
+
+/* ---------- Capa e estilo ---------- */
+function renderCapa(){
+  document.querySelectorAll('[data-capa]').forEach(el=>{ const v = st.capa[el.dataset.capa]; if (el.type==='checkbox') el.checked = !!v; else el.value = v ?? ''; });
+  $('#capa-img').innerHTML = seletorImg('capa', st.capa.imagem) + (iaDisp ? `<button class="btn peq ia" data-ilustrar="capa" style="margin:-2px 0 12px">✦ Ilustrar capa com IA</button>` : '');
+  $('#cores').innerHTML = CORES.map(([c,n])=>`<button style="background:${c}" data-cor="${c}" aria-pressed="${st.capa.cor===c}" title="${n}" aria-label="${n}"></button>`).join('');
+  $('#estilos').innerHTML = ESTILOS.map(([v,a,n])=>`<button data-fonte="${v}" aria-pressed="${st.capa.fonte===v}"><b class="ap-${v}" style="font-family:var(--ap-tit)">${a}</b><small>${n}</small></button>`).join('');
+}
+$('#cores').addEventListener('click', e=>{ const b=e.target.closest('[data-cor]'); if(!b) return; st.capa.cor=b.dataset.cor; salvarLocal(); renderCapa(); preview(); });
+$('#estilos').addEventListener('click', e=>{ const b=e.target.closest('[data-fonte]'); if(!b) return; st.capa.fonte=b.dataset.fonte; salvarLocal(); renderCapa(); preview(); });
+
+function aba(qual){
+  $('#t-cont').setAttribute('aria-selected', qual==='cont'); $('#t-capa').setAttribute('aria-selected', qual==='capa');
+  $('#p-cont').hidden = qual!=='cont'; $('#p-capa').hidden = qual!=='capa';
+  $('.add-fim').style.display = qual==='cont' ? '' : 'none';
+}
+$('#t-cont').onclick = ()=>aba('cont'); $('#t-capa').onclick = ()=>aba('capa');
+function vista(v){ document.body.dataset.vista = v; $('#m-editar').setAttribute('aria-selected', v==='editar'); $('#m-ver').setAttribute('aria-selected', v==='ver'); if(v==='ver') setTimeout(ajustarZoom,0); }
+$('#m-editar').onclick = ()=>vista('editar'); $('#m-ver').onclick = ()=>vista('ver');
+
+/* ---------- Modal e avisos ---------- */
+function modal(html){ $('#modal-caixa').innerHTML = html; $('#modal').hidden = false; const f = $('#modal-caixa').querySelector('input,textarea,select,button'); if (f) f.focus(); }
+function fecharModal(){ $('#modal').hidden = true; }
+$('#modal').addEventListener('click', e=>{ if (e.target.id==='modal' || e.target.dataset.fechar!==undefined) fecharModal(); });
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('#modal').hidden) fecharModal(); });
+let tAviso;
+function aviso(msg, desfazer){
+  const a = $('#aviso'); a.innerHTML = esc(msg) + (desfazer?' <button class="btn peq" id="b-desf" style="margin-left:8px">Desfazer</button>':'');
+  a.hidden = false; clearTimeout(tAviso); tAviso = setTimeout(()=>a.hidden=true, desfazer?6000:4000);
+  if (desfazer) $('#b-desf').onclick = ()=>{ desfazer(); a.hidden = true; };
+}
+
+function abrirPaleta(pos){
+  modal(`<h2>Adicionar bloco</h2><p class="sub">Escolha o tipo de conteúdo.</p><div class="paleta">${Object.entries(TIPOS).map(([k,t])=>`<button data-tipo="${k}"><b>${t.nome}</b><small>${t.desc}</small></button>`).join('')}</div><div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button></div>`);
+  $('#modal-caixa .paleta').onclick = e=>{ const b = e.target.closest('[data-tipo]'); if(!b) return;
+    const novo = {id:uid(), tipo:b.dataset.tipo, ...TIPOS[b.dataset.tipo].novo()};
+    st.blocos.splice(pos ?? st.blocos.length, 0, novo); salvarLocal(); fecharModal(); aba('cont'); vista('editar'); renderEditor();
+    requestAnimationFrame(()=>{ const el = document.querySelector(`[data-id="${novo.id}"]`); if (el){ el.scrollIntoView({block:'center'}); el.focus(); } });
+  };
+}
+$('#b-add').onclick = ()=>abrirPaleta();
+
+$('#b-nova').onclick = ()=>modal(`<h2>Começar uma nova apostila?</h2><p class="sub">A apostila atual será substituída. Se quiser guardá-la, use “Salvar projeto” antes.</p><div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn" id="m-exemplo">Carregar exemplo</button><button class="btn pri" id="m-branco">Em branco</button></div>`) || ligarNova();
+function ligarNova(){
+  $('#m-branco').onclick = ()=>{ const cor=st.capa.cor, fonte=st.capa.fonte; st = {capa:{titulo:'Nova apostila', subtitulo:'', disciplina:'', turma:'', autor:st.capa.autor||'', instituicao:st.capa.instituicao||'', ano:'', cor, fonte, mostrarCapa:true, sumario:true, cabecalho:false, gabarito:true, numeros:true}, blocos:[{id:uid(),tipo:'titulo',texto:'Introdução'},{id:uid(),tipo:'texto',texto:''}]}; fim(); };
+  $('#m-exemplo').onclick = ()=>{ st = exemplo(); fim(); };
+  const fim = ()=>{ contar('apostilas'); salvarLocal(); fecharModal(); renderCapa(); renderEditor(); aba('capa'); };
+}
+
+/* ---------- Arquivos ---------- */
+let downloads = null;
+async function salvarArquivo(nome, dados){
+  if (downloads){
+    try { await downloads.save({filename:nome, data:dados}); aviso('Arquivo pronto.'); return true; }
+    catch(e){ if (e && e.code==='declined') return; if (e && e.code==='rate_limited'){ aviso('Já há um download aguardando confirmação.'); return; } }
+  }
+  try {
+    const blob = dados instanceof Blob ? dados : new Blob([dados]);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 5000); return true;
+  } catch(e){ aviso(window.claude ? 'Este visualizador bloqueou o download. Abra o app na página dele no claude.ai e tente de novo.' : 'O navegador bloqueou o download. Verifique se downloads estão permitidos para este site e tente de novo.'); }
+}
+const nomeBase = ()=> (st.capa.titulo||'apostila').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'apostila';
+
+$('#b-salvar').onclick = ()=>{ const limpo = JSON.parse(JSON.stringify(st)); limpo.blocos.forEach(b=>delete b._rec); salvarArquivo(nomeBase()+'.json', JSON.stringify({app:'criador-de-apostilas', versao:1, ...limpo}, null, 2)); };
+$('#b-abrir').onclick = ()=>$('#f-abrir').click();
+$('#f-abrir').onchange = e=>{ const f = e.target.files[0]; if(!f) return; f.text().then(t=>{
+  try { const d = JSON.parse(t); if(!d.capa || !Array.isArray(d.blocos)) throw 0; d.blocos = d.blocos.filter(b=>TIPOS[b.tipo]).map(b=>({...b, id:b.id||uid()})); st = {capa:{...exemplo().capa, ...d.capa}, blocos:d.blocos}; salvarLocal(); renderCapa(); renderEditor(); aviso('Projeto aberto.'); }
+  catch(_){ aviso('Esse arquivo não é um projeto de apostila válido.'); }
+  e.target.value=''; }); };
+
+$('#b-html').onclick = ()=>{
+  const d = renderDoc(st);
+  const fontes = document.querySelector('link[href*="fonts.googleapis"]').outerHTML;
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(st.capa.titulo)}</title>${fontes}<style>${$('#apcss').textContent}
+body{margin:0;background:#e9ebef}.ap-folha{margin:24px auto;box-shadow:0 2px 12px rgba(0,0,0,.12)}
+@page{size:A4;margin:0}@media print{body{background:#fff}.ap-folha{margin:0;box-shadow:none;width:210mm}.ap-capa{height:297mm;break-after:page}.ap-conteudo{min-height:0}.ap-quebra{border:0;margin:0;break-after:page}.ap-quebra::after{display:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body class="exportando">${d.capa}${d.corpo}</body></html>`;
+  salvarArquivo(nomeBase()+'.html', html).then(ok=>{ if (ok) contar('pdfs'); });
+};
+
+$('#b-pdf').onclick = async ()=>{
+  if (typeof html2pdf === 'undefined'){ aviso('O gerador de PDF não carregou. Use “Baixar HTML” e imprima como PDF.'); return; }
+  const bt = $('#b-pdf'); bt.disabled = true; bt.textContent = 'Gerando PDF…';
+  const d = renderDoc(st);
+  const box = document.createElement('div'); box.className = 'exportando'; box.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px';
+  box.innerHTML = d.capa + (d.capa?'<div class="html2pdf__page-break"></div>':'') + d.corpo;
+  box.querySelectorAll('.ap-conteudo').forEach(s=>{ s.style.minHeight='0'; s.style.padding='0 64px'; });
+  box.querySelectorAll('.ap-capa').forEach(s=>{ s.style.height='1000px'; });
+  document.body.appendChild(box);
+  try {
+    await document.fonts.ready;
+    const temCapa = !!d.capa; const titulo = st.capa.titulo || '';
+    const blob = await html2pdf().set({
+      margin:[14,0,16,0], image:{type:'jpeg',quality:.95},
+      html2canvas:{scale:2, backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm', format:'a4', orientation:'portrait'},
+      pagebreak:{mode:['css','legacy'], avoid:['.ap-bloco','li','tr']}
+    }).from(box).toPdf().get('pdf').then(pdf=>{
+      if (!st.capa.numeros) return;
+      const n = pdf.internal.getNumberOfPages();
+      for (let i = temCapa?2:1; i<=n; i++){ pdf.setPage(i); pdf.setFontSize(8.5); pdf.setTextColor(130);
+        pdf.text(titulo, 17, 289); pdf.text(String(i), 193, 289, {align:'right'}); }
+    }).outputPdf('blob');
+    if (await salvarArquivo(nomeBase()+'.pdf', blob)) contar('pdfs');
+  } catch(e){ aviso('Não consegui gerar o PDF. Tente “Baixar HTML” e imprimir como PDF.'); }
+  finally { box.remove(); bt.disabled = false; bt.textContent = 'Baixar PDF'; }
+};
+
+/* ---------- IA ---------- */
+let iaDisp = false, sample = null;
+const ESQUEMA = `Responda SOMENTE com JSON válido (sem texto antes ou depois) neste formato:
+{"titulo":"...","subtitulo":"...","blocos":[ ... ]}
+Cada bloco é um destes objetos:
+{"tipo":"titulo","texto":"título de seção"}
+{"tipo":"subtitulo","texto":"..."}
+{"tipo":"texto","texto":"parágrafos separados por \\n\\n; pode usar **negrito**, *itálico* e ==marca-texto=="}
+{"tipo":"lista","itens":["...","..."],"numerada":false}
+{"tipo":"destaque","estilo":"dica|atencao|curiosidade|definicao","titulo":"...","texto":"..."}
+{"tipo":"imagem","sugestao":"descrição da ilustração ideal","legenda":"..."}
+{"tipo":"imgtexto","sugestao":"descrição da ilustração","texto":"texto que fica ao lado da imagem","lado":"esq|dir"}
+{"tipo":"tabela","linhas":[["Cabeçalho 1","Cabeçalho 2"],["a","b"]]}
+{"tipo":"aberta","enunciado":"...","linhas":4,"resposta":"resposta esperada curta"}
+{"tipo":"multipla","enunciado":"...","alternativas":["...","...","...","..."],"correta":0}
+{"tipo":"vf","enunciado":"Marque V ou F.","itens":[{"texto":"...","v":true}]}
+{"tipo":"quebra"}`;
+
+function normalizar(bl){
+  return (bl||[]).filter(b=>b && TIPOS[b.tipo]).map(b=>{
+    const o = {id:uid(), tipo:b.tipo, ...TIPOS[b.tipo].novo()};
+    if (b.tipo==='lista'){ o.itens = (b.itens||[]).join('\n'); o.numerada = !!b.numerada; }
+    else if (b.tipo==='tabela'){ o.dados = (b.linhas||[]).map(r=>r.join(' | ')).join('\n'); }
+    else if (b.tipo==='multipla'){ o.enunciado = b.enunciado||''; o.alternativas = (b.alternativas||[]).map((a,i)=>(i===b.correta?'*':'')+a).join('\n'); }
+    else if (b.tipo==='vf'){ o.enunciado = b.enunciado||o.enunciado; o.itens = (b.itens||[]).map(i=>(i.v?'V: ':'F: ')+i.texto).join('\n'); }
+    else if (b.tipo==='aberta'){ o.enunciado=b.enunciado||''; o.linhas=+b.linhas||4; o.resposta=b.resposta||''; }
+    else if (b.tipo==='destaque'){ o.estilo = BOXES.some(x=>x[0]===b.estilo)?b.estilo:'dica'; o.titulo=b.titulo||BOXES.find(x=>x[0]===o.estilo)[1]; o.texto=b.texto||''; }
+    else if (b.tipo==='imagem'){ o.sugestao = b.sugestao||''; o.legenda = b.legenda||''; }
+    else if (b.tipo==='imgtexto'){ o.sugestao = b.sugestao||''; o.texto = b.texto||''; o.lado = b.lado==='dir'?'dir':'esq'; o.legenda = b.legenda||''; }
+    else if (b.tipo==='galeria'){ o.imagens = (b.imagens||[]).map(i=>({src:'', legenda:i.legenda||''})); if (!o.imagens.length) o.imagens = TIPOS.galeria.novo().imagens; }
+    else if (b.texto!==undefined) o.texto = b.texto;
+    return o;
+  });
+}
+
+function montarPrompt(f, nova){
+  const c = st.capa;
+  const tam = {curta:'2 seções, cerca de 10 blocos', media:'3 a 4 seções, cerca de 18 blocos', longa:'5 a 6 seções, cerca de 30 blocos'}[f.tam];
+  const ex = {mistas:'inclua no fim uma seção de atividades misturando múltipla escolha, V ou F e questões abertas', multipla:'inclua atividades só de múltipla escolha', abertas:'inclua atividades só com questões abertas', nenhuma:'não inclua atividades'}[f.ex];
+  const vis = {muitas:'Faça uma apostila bem visual: coloque um bloco "imagem" ou "imgtexto" em quase toda seção.', algumas:'Coloque 2 ou 3 blocos "imagem" ou "imgtexto" onde uma ilustração ajude a entender.', nenhuma:'Não use blocos de imagem.'}[f.vis];
+  return `Você é um professor experiente que escreve apostilas didáticas em português do Brasil.
+${nova?`Escreva uma apostila completa sobre: "${f.tema}".`:`Escreva UMA nova seção para a apostila "${c.titulo}" sobre: "${f.tema}". Comece com um bloco "titulo". Não repita o título da apostila.`}
+Disciplina: ${f.disc||'não informada'}. Público: ${f.publico||'não informado'}.
+Tamanho: ${nova?tam:'5 a 9 blocos'}. Atividades: ${ex}.
+${vis} Em "sugestao", descreva a ilustração de forma concreta (o que aparece, estilo didático), pois ela será desenhada depois.
+${f.obs?'Observações do professor: '+f.obs:''}
+Use linguagem adequada ao público, conteúdo correto, exemplos concretos e caixas de destaque com moderação. Coloque uma "quebra" antes da seção de atividades.
+${ESQUEMA}`;
+}
+
+function extrairJSON(txt){
+  let t = String(txt||'').trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  const a = t.indexOf('{'), z = t.lastIndexOf('}');
+  if (a<0 || z<a) throw new Error('sem json');
+  return JSON.parse(t.slice(a, z+1));
+}
+
+function aplicarResultado(r, f, nova){
+  const blocos = normalizar(r && r.blocos);
+  if (!blocos.length) throw new Error('vazio');
+  if (nova){
+    contar('apostilas');
+    st.blocos = blocos; st.capa.titulo = r.titulo || f.tema; st.capa.subtitulo = r.subtitulo || '';
+    if (f.disc) st.capa.disciplina = f.disc; if (f.publico) st.capa.turma = f.publico;
+  } else st.blocos.push(...blocos);
+  salvarLocal(); fecharModal(); renderCapa(); aba('cont'); vista('editar'); renderEditor();
+  const nImg = blocos.filter(b=>b.tipo==='imagem'||b.tipo==='imgtexto').length;
+  aviso((nova?'Apostila criada.':'Seção adicionada no fim.') + (nImg?` ${nImg} ${nImg===1?'imagem sugerida':'imagens sugeridas'}: ${iaDisp?'use “Ilustrar com IA” ou ':''}coloque suas fotos.`:''));
+}
+
+let modoIA = 'auto';
+function abrirIA(modo){
+  const c = st.capa; const nova = modo==='nova';
+  if (!iaDisp) modoIA = 'semi';
+  const f0 = abrirIA.ult || {};
+  modal(`<h2>${nova?'Criar apostila':'Nova seção'}</h2>
+  <div class="abas" role="tablist" style="margin:0 -20px 14px">
+    <button role="tab" data-modo="auto" aria-selected="${modoIA==='auto'}" ${iaDisp?'':'disabled title="Disponível na versão dentro do Claude"'}>⚡ Automático</button>
+    <button role="tab" data-modo="semi" aria-selected="${modoIA==='semi'}">✅ Semiautomático</button>
+  </div>
+  <p class="sub" id="ia-expl"></p>
+  <div class="campo"><label for="ia-tema">${nova?'Tema da apostila':'Assunto da seção'}</label><input type="text" id="ia-tema" placeholder="${nova?'Ex.: Frações equivalentes':'Ex.: Exemplos do dia a dia'}" value="${esc(f0.tema ?? (nova && c.titulo!=='Nova apostila' ? c.titulo : ''))}"></div>
+  <div class="linha2"><div class="campo"><label for="ia-disc">Disciplina</label><input type="text" id="ia-disc" value="${esc(f0.disc ?? c.disciplina)}"></div>
+  <div class="campo"><label for="ia-publico">Série / público</label><input type="text" id="ia-publico" value="${esc(f0.publico ?? c.turma)}" placeholder="Ex.: 5º ano, curso livre"></div></div>
+  <div class="linha2"><div class="campo"><label for="ia-tam">Tamanho</label><select id="ia-tam"><option value="curta">Curta</option><option value="media" selected>Média</option><option value="longa">Longa</option></select></div>
+  <div class="campo"><label for="ia-ex">Atividades</label><select id="ia-ex"><option value="mistas" selected>Mistas</option><option value="multipla">Só múltipla escolha</option><option value="abertas">Só abertas</option><option value="nenhuma">Sem atividades</option></select></div></div>
+  <div class="campo"><label for="ia-vis">Imagens</label><select id="ia-vis"><option value="muitas" selected>Bem ilustrada</option><option value="algumas">Algumas imagens</option><option value="nenhuma">Sem imagens</option></select></div>
+  <div class="campo"><label for="ia-obs">Observações (opcional)</label><textarea id="ia-obs" rows="2" placeholder="Ex.: linguagem simples, alinhar à BNCC, exemplos com dinheiro">${esc(f0.obs||'')}</textarea></div>
+  <div id="ia-semi"></div>
+  <div id="ia-status"></div>
+  <div class="modal-acoes" id="ia-acoes"></div>`);
+  const ler = () => ({tema:$('#ia-tema').value.trim(), disc:$('#ia-disc').value.trim(), publico:$('#ia-publico').value.trim(), tam:$('#ia-tam').value, ex:$('#ia-ex').value, vis:$('#ia-vis').value, obs:$('#ia-obs').value.trim()});
+  if (f0.tam) { $('#ia-tam').value = f0.tam; $('#ia-ex').value = f0.ex; $('#ia-vis').value = f0.vis; }
+  const desenhar = () => {
+    document.querySelectorAll('[data-modo]').forEach(b=>b.setAttribute('aria-selected', b.dataset.modo===modoIA));
+    $('#ia-status').innerHTML = '';
+    if (modoIA==='auto'){
+      const cr = creditosIA();
+      $('#ia-expl').textContent = 'Você descreve o que precisa e a apostila é escrita aqui mesmo, com espaços para as ilustrações. Depois é só revisar.' + (cr===Infinity ? '' : ` Créditos restantes: ${cr}.`);
+      $('#ia-semi').innerHTML = '';
+      $('#ia-acoes').innerHTML = `<button class="btn" data-fechar>Cancelar</button><button class="btn ia" id="ia-ir">Gerar ${nova?'apostila':'seção'}</button>`;
+      $('#ia-ir').onclick = gerarAuto;
+    } else {
+      $('#ia-expl').innerHTML = 'Grátis e sem limite, com qualquer IA (ChatGPT, Claude, Gemini). São 3 passos: <b>1.</b> copie o pedido, <b>2.</b> cole na IA, <b>3.</b> cole a resposta aqui.';
+      $('#ia-semi').innerHTML = `<div class="campo"><label for="ia-resp">3. Resposta da IA</label><textarea id="ia-resp" rows="4" placeholder="Cole aqui o texto que a IA respondeu (começa com { )"></textarea></div>`;
+      $('#ia-acoes').innerHTML = `<button class="btn" data-fechar>Cancelar</button><button class="btn" id="ia-copiar">1. Copiar pedido</button><button class="btn pri" id="ia-montar">Montar apostila</button>`;
+      $('#ia-copiar').onclick = async () => {
+        const f = ler(); if (!f.tema){ $('#ia-tema').focus(); return; }
+        abrirIA.ult = f; const p = montarPrompt(f, nova);
+        try { await navigator.clipboard.writeText(p); $('#ia-status').innerHTML = '<p class="dica-campo" style="margin:4px 0 0;color:var(--ink)">Pedido copiado. <b>2.</b> Cole numa conversa nova da sua IA, espere a resposta, copie tudo e cole no campo acima.</p>'; }
+        catch(_){ $('#ia-status').innerHTML = `<div class="campo"><label for="ia-pedido">Copie este pedido manualmente</label><textarea id="ia-pedido" rows="5" readonly>${esc(p)}</textarea></div>`; $('#ia-pedido').select(); }
+      };
+      $('#ia-montar').onclick = () => {
+        const f = ler(); abrirIA.ult = f;
+        try { aplicarResultado(extrairJSON($('#ia-resp').value), f, nova); }
+        catch(_){ $('#ia-status').innerHTML = '<p class="dica-campo" style="color:var(--danger);margin:4px 0 0">Não reconheci a resposta. Copie a resposta inteira da IA, do primeiro { ao último }.</p>'; }
+      };
+    }
+  };
+  document.querySelectorAll('[data-modo]').forEach(b=>b.onclick = ()=>{ if (b.disabled) return; modoIA = b.dataset.modo; desenhar(); });
+  async function gerarAuto(){
+    const f = ler(); if (!f.tema){ $('#ia-tema').focus(); return; }
+    abrirIA.ult = f;
+    if (creditosIA() <= 0){ $('#ia-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${SEM_CREDITO}</p>`; return; }
+    const bt = $('#ia-ir'); bt.disabled = true; $('#ia-status').innerHTML = '<div class="carregando">Escrevendo o conteúdo… isso pode levar alguns segundos.</div>';
+    try { const r = await sample.json(montarPrompt(f, nova), {modelTier:'default'}); contar('usosIA'); aplicarResultado(r, f, nova); }
+    catch(e){
+      bt.disabled = false;
+      const msg = e && e.code==='rate_limited' ? 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' : e && e.code==='not_granted' ? 'A IA não foi autorizada nesta página. Use o modo Semiautomático.' : 'Não consegui gerar o conteúdo. Tente de novo ou use o modo Semiautomático.';
+      $('#ia-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${msg}</p>`;
+    }
+  }
+  desenhar();
+}
+$('#b-ia').onclick = ()=>abrirIA('nova');
+$('#b-ia-secao').onclick = ()=>abrirIA('secao');
+
+/* ---------- Ilustrar com IA (desenho vetorial) ---------- */
+function limparSVG(txt){
+  const m = String(txt||'').match(/<svg[\s\S]*<\/svg>/i); if (!m) throw new Error('sem svg');
+  const doc = new DOMParser().parseFromString(m[0], 'image/svg+xml');
+  const svg = doc.documentElement; if (svg.nodeName.toLowerCase()!=='svg' || doc.querySelector('parsererror')) throw new Error('svg inválido');
+  doc.querySelectorAll('script,foreignObject,iframe,image,use[href^="http"]').forEach(n=>n.remove());
+  doc.querySelectorAll('*').forEach(n=>[...n.attributes].forEach(a=>{ if (/^on/i.test(a.name) || /javascript:/i.test(a.value)) n.removeAttribute(a.name); }));
+  if (!svg.getAttribute('xmlns')) svg.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  if (!svg.getAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${parseFloat(svg.getAttribute('width'))||640} ${parseFloat(svg.getAttribute('height'))||400}`);
+  svg.removeAttribute('width'); svg.removeAttribute('height');
+  svg.setAttribute('width','1200'); const vb = svg.getAttribute('viewBox').split(/[\s,]+/).map(Number);
+  svg.setAttribute('height', String(Math.round(1200*vb[3]/vb[2]) || 750));
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+}
+function abrirIlustrar(t){
+  const a = alvo(t); if (!a) return;
+  let sug = '';
+  if (t==='capa') sug = `Ilustração de capa para uma apostila sobre ${st.capa.titulo}${st.capa.disciplina?' ('+st.capa.disciplina+')':''}`;
+  else { const [k,id] = t.split(':'); const b = st.blocos.find(x=>x.id===id); sug = (b && (b.sugestao || b.legenda)) || ''; }
+  modal(`<h2>Ilustrar com IA</h2><p class="sub">A IA desenha uma ilustração simples, no estilo de livro didático (formas e cores chapadas). Funciona melhor para esquemas, objetos, mapas simples e cenas com poucos elementos.</p>
+  <div class="campo"><label for="il-desc">O que a ilustração deve mostrar</label><textarea id="il-desc" rows="3" placeholder="Ex.: uma pizza dividida em 8 fatias, com 3 fatias destacadas em laranja">${esc(sug)}</textarea></div>
+  <div class="campo"><label for="il-est">Estilo</label><select id="il-est"><option value="didatico">Didático, cores suaves</option><option value="infantil">Infantil, colorido e arredondado</option><option value="esquema">Esquema com setas e rótulos</option><option value="colorir">Para colorir (só contornos pretos)</option></select></div>
+  <div id="il-status"></div>
+  <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn ia" id="il-ir">Desenhar</button></div>`);
+  if (st.capa.fonte==='infantil') $('#il-est').value = 'infantil';
+  $('#il-ir').onclick = async ()=>{
+    const d = $('#il-desc').value.trim(); if (!d){ $('#il-desc').focus(); return; }
+    if (creditosIA() <= 0){ $('#il-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${SEM_CREDITO}</p>`; return; }
+    const est = {didatico:'estilo de livro didático brasileiro: formas simples, cores chapadas e suaves, contornos discretos', infantil:'estilo infantil: formas arredondadas, cores vivas e alegres, personagens fofos se fizer sentido', esquema:'esquema explicativo: elementos simples, setas e rótulos curtos em português, fundo claro', colorir:'desenho para colorir: apenas contornos pretos grossos (stroke #000, stroke-width 3 a 5), fill branco ou none, sem cores, sem texto'}[$('#il-est').value];
+    const bt = $('#il-ir'); bt.disabled = true; $('#il-status').innerHTML = '<div class="carregando">Desenhando… pode levar até um minuto.</div>';
+    try {
+      const r = await sample(`Crie uma ilustração em SVG para uma apostila escolar.
+Assunto: ${d}
+Estilo: ${est}.
+Regras: um único elemento <svg> com xmlns e viewBox="0 0 800 ${t==='capa'?'500':'520'}"; sem <script>, sem <image>, sem fontes externas (use font-family="Arial, sans-serif" se houver texto, com textos em português e sem erros); desenhe com path, circle, rect, ellipse, polygon e gradientes simples; preencha bem a área; composição clara e reconhecível.
+Responda SOMENTE com o código SVG.`, {modelTier:'complex'});
+      contar('usosIA');
+      aplicarImg(t, limparSVG(r.text)); fecharModal(); aviso('Ilustração adicionada. Se não gostar, clique em Remover e tente outra descrição.');
+    } catch(e){
+      bt.disabled = false;
+      $('#il-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${e && e.code==='rate_limited' ? 'Muitos pedidos seguidos. Espere um minuto.' : 'Não consegui desenhar. Tente descrever com menos elementos.'}</p>`;
+    }
+  };
+}
+document.addEventListener('click', e=>{ const b = e.target.closest('[data-ilustrar]'); if (b) abrirIlustrar(b.dataset.ilustrar); });
+
+/* ---------- Acesso e painel do administrador ---------- */
+const CFG_PADRAO = {modo:'aberto', limiteIA:0, status:{}, extras:{}};
+const ACESSO = {db:null, user:null, id:null, dono:false, cfg:{...CFG_PADRAO}, cfgExiste:false, eu:null, registrado:undefined, usuarios:[], carregados:false, unsub:null, filtro:'todos', busca:''};
+const cfgRef = () => ACESSO.db.doc('config/acesso');
+const meuRef = () => ACESSO.db.doc('usuarios/' + ACESSO.id);
+
+async function iniciarAcesso(){
+  if (!(window.claude && claude.use)) return;
+  let db, user;
+  try { [db, user] = await Promise.all([claude.use('db'), claude.use('user')]); } catch(e){ return; }
+  if (!db || !user) return;
+  ACESSO.db = db; ACESSO.user = user;
+  ACESSO.dono = await user.isOwner();
+  ACESSO.id = await user.id();
+  if (ACESSO.dono) $('#b-painel').hidden = false;
+  try {
+    cfgRef().onSnapshot(s=>{
+      ACESSO.cfgExiste = s.exists;
+      const d = s.data() || {};
+      ACESSO.cfg = {...CFG_PADRAO, ...d, status:{...(d.status||{})}, extras:{...(d.extras||{})}};
+      aplicarTrava(); if (!$('#painel').hidden) renderPainel();
+    }, ()=>{});
+  } catch(e) {}
+  if (ACESSO.id) registrar(); else aplicarTrava();
+}
+
+async function registrar(){
+  const agora = Date.now();
+  try {
+    const s = await meuRef().get();
+    if (!s.exists){
+      ACESSO.eu = {primeiroAcesso:agora, ultimoAcesso:agora, apostilas:0, pdfs:0, usosIA:0, ultimaApostila:(st.capa.titulo||'').slice(0,120)};
+      await meuRef().set(ACESSO.eu);
+    } else {
+      ACESSO.eu = {...s.data()};
+      if (agora - (ACESSO.eu.ultimoAcesso||0) > 10*60e3){ ACESSO.eu.ultimoAcesso = agora; await meuRef().update({ultimoAcesso:agora}); }
+    }
+    ACESSO.registrado = true;
+  } catch(e){ ACESSO.registrado = false; }
+  aplicarTrava();
+}
+
+let filaReg = Promise.resolve();
+function contar(campo){
+  if (!ACESSO.db || !ACESSO.eu || !ACESSO.registrado) return;
+  ACESSO.eu[campo] = (ACESSO.eu[campo]||0) + 1;
+  const patch = {[campo]:ACESSO.eu[campo], ultimoAcesso:Date.now(), ultimaApostila:(st.capa.titulo||'').slice(0,120)};
+  filaReg = filaReg.then(()=>meuRef().update(patch)).catch(()=>{});
+}
+
+function statusDe(id){
+  if (ACESSO.dono && id===ACESSO.id) return 'adm';
+  return ACESSO.cfg.status[id] || (ACESSO.cfg.modo==='aprovacao' ? 'pendente' : 'liberado');
+}
+
+function creditosIA(){
+  if (!ACESSO.db || ACESSO.dono || !(+ACESSO.cfg.limiteIA)) return Infinity;
+  return Math.max(0, (+ACESSO.cfg.limiteIA) + (+(ACESSO.cfg.extras[ACESSO.id])||0) - (ACESSO.eu?.usosIA||0));
+}
+const SEM_CREDITO = 'Seus créditos do modo automático acabaram. Use o modo Semiautomático, que é ilimitado, ou peça mais créditos ao administrador.';
+
+function aplicarTrava(){
+  const t = $('#trava');
+  if (!ACESSO.db || ACESSO.dono){ t.hidden = true; return; }
+  let titulo = '', msg = '';
+  if (!ACESSO.id){
+    if (ACESSO.cfg.modo !== 'aprovacao'){ t.hidden = true; return; }
+    titulo = 'Entre com sua conta'; msg = 'Este app só pode ser usado por pessoas liberadas pelo administrador. Entre na sua conta do Claude e abra o link de novo.';
+  } else {
+    const s = statusDe(ACESSO.id);
+    if (s==='liberado'){ t.hidden = true; return; }
+    if (s==='bloqueado'){ titulo = 'Acesso bloqueado'; msg = 'O administrador bloqueou seu acesso a este app. Se acha que é um engano, fale com quem te enviou o link.'; }
+    else { titulo = 'Aguardando liberação'; msg = ACESSO.registrado===false
+      ? 'Não consegui registrar seu pedido. Peça ao administrador para compartilhar o app com você com a permissão “Colaborador” e abra o link de novo.'
+      : 'Seu pedido de acesso foi enviado. Assim que o administrador liberar, esta tela abre sozinha.'; }
+  }
+  $('#trava-tit').textContent = titulo; $('#trava-msg').textContent = msg; t.hidden = false;
+}
+
+/* --- Painel --- */
+function tempoRel(ms){
+  if (!ms) return '—';
+  const d = Date.now() - ms, m = Math.round(d/60000);
+  if (m < 2) return 'agora'; if (m < 60) return `há ${m} min`;
+  const h = Math.round(m/60); if (h < 24) return `há ${h} h`;
+  const dias = Math.round(h/24); if (dias < 30) return `há ${dias} ${dias===1?'dia':'dias'}`;
+  return new Date(ms).toLocaleDateString('pt-BR');
+}
+function abrirPainel(){
+  $('#painel').hidden = false;
+  if (!ACESSO.unsub){
+    const timer = setTimeout(()=>{ if (!ACESSO.carregados) $('#p-lista').innerHTML = '<div class="vazio">Ainda não consegui carregar os usuários. Verifique a conexão; a lista aparece sozinha quando responder.</div>'; }, 10000);
+    ACESSO.unsub = ACESSO.db.collection('usuarios').onSnapshot(s=>{
+      clearTimeout(timer); ACESSO.carregados = true;
+      ACESSO.usuarios = s.docs.map(d=>({id:d.id, ...d.data()}));
+      renderPainel();
+    }, ()=>{ clearTimeout(timer); $('#p-lista').innerHTML = '<div class="vazio">Não foi possível carregar os usuários.</div>'; });
+  }
+  renderPainel();
+}
+$('#b-painel').onclick = abrirPainel;
+$('#p-fechar').onclick = ()=>{ $('#painel').hidden = true; };
+
+async function renderPainel(){
+  const c = ACESSO.cfg, us = ACESSO.usuarios;
+  $('#p-modo').value = c.modo; $('#p-limite').value = +c.limiteIA || 0;
+  const outros = us.filter(u=>u.id!==ACESSO.id);
+  const semana = Date.now() - 7*864e5;
+  const soma = k => us.reduce((a,u)=>a + (+u[k]||0), 0);
+  const pend = outros.filter(u=>statusDe(u.id)==='pendente').length;
+  $('#p-tiles').innerHTML = [
+    [outros.length, 'Usuários'], [outros.filter(u=>(u.ultimoAcesso||0) > semana).length, 'Ativos nos últimos 7 dias'],
+    [pend, 'Aguardando liberação', pend?'alerta':''], [soma('apostilas'), 'Apostilas criadas'], [soma('pdfs'), 'Arquivos baixados'], [soma('usosIA'), 'Usos da IA automática'],
+  ].map(([n,r,cls])=>`<div class="tile ${cls||''}"><b>${n}</b><span>${r}</span></div>`).join('');
+  if (!ACESSO.carregados) { $('#p-lista').innerHTML = '<div class="carregando">Carregando usuários…</div>'; return; }
+  const ps = await ACESSO.user.profiles(us.map(u=>u.id));
+  const busca = ACESSO.busca.toLowerCase();
+  let lista = us.slice().sort((a,b)=>(b.ultimoAcesso||0)-(a.ultimoAcesso||0));
+  lista = lista.filter(u=>{
+    const s = statusDe(u.id); const p = ps[u.id] || {};
+    if (ACESSO.filtro!=='todos' && s!==ACESSO.filtro) return false;
+    if (busca && !((p.name||'')+' '+(p.email||'')).toLowerCase().includes(busca)) return false;
+    return true;
+  });
+  if (!us.length){ $('#p-lista').innerHTML = '<div class="vazio">Ninguém usou o app ainda. Compartilhe o link e as pessoas aparecem aqui quando abrirem.</div>'; return; }
+  if (!lista.length){ $('#p-lista').innerHTML = '<div class="vazio">Nenhum usuário com esse filtro.</div>'; return; }
+  const limite = +c.limiteIA || 0;
+  const ROT = {adm:'Administrador', liberado:'Liberado', bloqueado:'Bloqueado', pendente:'Aguardando'};
+  $('#p-lista').innerHTML = lista.map(u=>{
+    const p = ps[u.id] || {}; const s = statusDe(u.id); const extra = +c.extras[u.id] || 0;
+    const ia = limite && s!=='adm' ? `${u.usosIA||0} de ${limite+extra}` : `${u.usosIA||0}`;
+    const acoes = s==='adm' ? '' : `
+      ${s!=='liberado'?`<button class="btn peq pri" data-acao="liberado" data-uid="${esc(u.id)}">Liberar</button>`:''}
+      ${s!=='bloqueado'?`<button class="btn peq perigo" data-acao="bloqueado" data-uid="${esc(u.id)}">Bloquear</button>`:''}
+      ${limite?`<button class="btn peq" data-acao="credito" data-uid="${esc(u.id)}" title="Dar mais 5 créditos de IA">+5 créditos</button>`:''}`;
+    return `<div class="u-linha">
+      <img class="u-av" src="${esc(p.avatarUrl||'')}" alt="">
+      <div class="u-quem"><b>${esc(p.name||'Pessoa sem nome visível')}</b><small>${esc(p.email||'')}</small></div>
+      <span class="chip ${s}">${ROT[s]}</span>
+      <div class="u-num"><span><b>${u.apostilas||0}</b> apostilas</span><span><b>${u.pdfs||0}</b> downloads</span><span><b>${ia}</b> usos de IA</span></div>
+      <div class="u-quando"><small>Último acesso</small>${tempoRel(u.ultimoAcesso)}${u.ultimaApostila?`<small title="Última apostila">${esc(u.ultimaApostila)}</small>`:''}</div>
+      <div class="u-acoes">${acoes}</div>
+    </div>`;
+  }).join('');
+}
+
+let filaCfg = Promise.resolve();
+function salvarCfg(patch){
+  filaCfg = filaCfg.then(async ()=>{
+    if (ACESSO.cfgExiste) await cfgRef().update(patch);
+    else { await cfgRef().set({...CFG_PADRAO, ...ACESSO.cfg, ...patch}); ACESSO.cfgExiste = true; }
+  }).catch(()=>aviso('Não consegui salvar a alteração. Tente de novo.'));
+  return filaCfg;
+}
+$('#p-lista').addEventListener('click', e=>{
+  const b = e.target.closest('[data-acao]'); if (!b) return;
+  const id = b.dataset.uid, a = b.dataset.acao;
+  if (a==='credito'){ const n = (+ACESSO.cfg.extras[id]||0) + 5; ACESSO.cfg.extras[id] = n; salvarCfg({extras:{[id]:n}}); aviso('Mais 5 créditos liberados.'); }
+  else { ACESSO.cfg.status[id] = a; salvarCfg({status:{[id]:a}}); aviso(a==='liberado'?'Acesso liberado.':'Acesso bloqueado.'); }
+  renderPainel();
+});
+$('#p-modo').onchange = e=>{ ACESSO.cfg.modo = e.target.value; salvarCfg({modo:e.target.value}); renderPainel(); };
+$('#p-limite').onchange = e=>{ const n = Math.max(0, Math.round(+e.target.value||0)); ACESSO.cfg.limiteIA = n; salvarCfg({limiteIA:n}); renderPainel(); };
+$('#p-busca').oninput = e=>{ ACESSO.busca = e.target.value; renderPainel(); };
+$('#p-filtro').onchange = e=>{ ACESSO.filtro = e.target.value; renderPainel(); };
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('#painel').hidden && $('#modal').hidden) $('#painel').hidden = true; });
+
+
+/* ---------- App instalável ---------- */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+const instalado = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const ehIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+let pedidoInstalar = null;
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); pedidoInstalar = e; if (!instalado) $('#b-instalar').hidden = false; });
+window.addEventListener('appinstalled', ()=>{ $('#b-instalar').hidden = true; aviso('App instalado. Ele já está na sua tela inicial.'); });
+if (!instalado && ehIOS && !window.claude) $('#b-instalar').hidden = false;
+$('#b-instalar').onclick = async ()=>{
+  if (pedidoInstalar){ pedidoInstalar.prompt(); try { await pedidoInstalar.userChoice; } catch(_){} pedidoInstalar = null; return; }
+  modal(`<h2>Instalar no ${ehIOS?'iPhone ou iPad':'aparelho'}</h2>
+  <p class="sub">${ehIOS
+    ? '1. Abra este endereço no <b>Safari</b>.<br>2. Toque no botão <b>Compartilhar</b> (quadrado com seta para cima).<br>3. Escolha <b>Adicionar à Tela de Início</b> e toque em <b>Adicionar</b>.'
+    : 'No Chrome ou Edge, abra o menu (⋮) e escolha <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.'}</p>
+  <div class="modal-acoes"><button class="btn pri" data-fechar>Entendi</button></div>`);
+};
+
+/* ---------- Início ---------- */
+(async ()=>{
+  await carregarSalvo();
+  renderCapa(); renderEditor(); aba('cont');
+  document.fonts && document.fonts.ready.then(ajustarZoom);
+})();
+if (window.claude && claude.use){
+  claude.use('sample').then(s=>{ if (s){ sample = s; iaDisp = true; modoIA = 'auto'; renderCapa(); renderEditor(); } }).catch(()=>{});
+  claude.use('downloads').then(d=>{ downloads = d; }).catch(()=>{});
+  iniciarAcesso();
+}
+</script>
+</body>
+</html>
