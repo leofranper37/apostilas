@@ -1050,7 +1050,8 @@ const VENDA = {on:false, fb:null, user:null, cliente:null, admin:false, lista:[]
 const DOMINIO = '@apostilas.local';
 const emailDe = u => String(u||'').trim().toLowerCase() + DOMINIO;
 const usuarioDe = e => String(e||'').replace(DOMINIO, '');
-const msgSemAuto = () => VENDA.on ? 'Peça créditos ao administrador para usar o modo automático' : 'Disponível na versão com conta';
+const AUTO = () => CFG.modoAutomatico === true;
+const msgSemAuto = () => VENDA.on && !AUTO() ? 'Em breve' : VENDA.on ? 'Peça créditos ao administrador para usar o modo automático' : 'Disponível na versão com conta';
 
 async function iaJSON(p){
   if (sample){ const r = await sample.json(p, {modelTier:'default'}); contar('usosIA'); return r; }
@@ -1080,7 +1081,7 @@ function atualizarConta(){
   const b = $('#b-conta');
   if (!VENDA.on || !VENDA.user){ b.hidden = true; $('#b-painel').hidden = true; return; }
   b.hidden = false;
-  b.textContent = VENDA.admin ? 'Sair' : `Minha conta · ${VENDA.cliente?.creditos||0} ${(VENDA.cliente?.creditos||0)===1?'crédito':'créditos'}`;
+  b.textContent = VENDA.admin ? 'Sair' : !AUTO() ? 'Minha conta' : `Minha conta · ${VENDA.cliente?.creditos||0} ${(VENDA.cliente?.creditos||0)===1?'crédito':'créditos'}`;
   $('#b-painel').hidden = !VENDA.admin;
 }
 function travaVenda(titulo, msg, extra){
@@ -1114,7 +1115,7 @@ function pedirLogin(erro){
 }
 
 function liberarApp(){
-  $('#trava').hidden = true; iaDisp = VENDA.admin || (VENDA.cliente && VENDA.cliente.creditos > 0) || iaDisp;
+  $('#trava').hidden = true; iaDisp = AUTO() && (VENDA.admin || (VENDA.cliente && VENDA.cliente.creditos > 0));
   if (iaDisp && modoIA!=='semi') modoIA = 'auto';
   atualizarConta(); renderCapa(); renderEditor();
 }
@@ -1137,7 +1138,7 @@ function aoMudarLogin(user){
       $('#v-sair').onclick = ()=>VENDA.fb.au.signOut(VENDA.fb.auth);
       return;
     }
-    iaDisp = VENDA.cliente.creditos > 0;
+    iaDisp = AUTO() && VENDA.cliente.creditos > 0;
     if (primeira){ primeira = false; liberarApp(); updateDoc(s.ref, {ultimoAcesso: serverTimestamp()}).catch(()=>{}); }
     else atualizarConta();
   }, ()=>{
@@ -1152,8 +1153,9 @@ $('#b-conta').onclick = ()=>{
   if (VENDA.admin){ VENDA.fb.au.signOut(VENDA.fb.auth); return; }
   const c = VENDA.cliente || {};
   modal(`<h2>Minha conta</h2><p class="sub">${esc(c.nome||'')} · usuário <b>${esc(c.usuario||usuarioDe(VENDA.user?.email))}</b></p>
-  <div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usosIA||0}</b><span>Usos da IA automática</span></div></div>
-  <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada apostila, seção ou ilustração no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>
+  ${AUTO() ? `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usosIA||0}</b><span>Usos da IA automática</span></div></div>
+  <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada apostila, seção ou ilustração no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>` : `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.apostilas||0}</b><span>Apostilas criadas</span></div><div class="tile"><b>${c.pdfs||0}</b><span>Arquivos baixados</span></div></div>
+  <p class="dica-campo">Use “Criar com IA” no modo Semiautomático: é grátis e ilimitado.</p>`}
   <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn pri" data-fechar>Fechar</button></div>`);
   $('#v-sair2').onclick = ()=>{ fecharModal(); VENDA.fb.au.signOut(VENDA.fb.auth); };
 };
@@ -1173,7 +1175,7 @@ const dataDe = t => t && t.toDate ? t.toDate().getTime() : 0;
 function renderAdm(){
   const us = VENDA.lista, semana = Date.now() - 7*864e5, busca = ($('#adm-busca').value||'').toLowerCase();
   const soma = k => us.reduce((a,u)=>a + (+u[k]||0), 0);
-  $('#adm-tiles').innerHTML = [[us.length,'Clientes'],[us.filter(u=>u.ativo).length,'Com acesso'],[us.filter(u=>dataDe(u.ultimoAcesso)>semana).length,'Ativos nos últimos 7 dias'],[soma('apostilas'),'Apostilas criadas'],[soma('pdfs'),'Arquivos baixados'],[soma('usosIA'),'Usos da IA automática']]
+  $('#adm-tiles').innerHTML = [[us.length,'Clientes'],[us.filter(u=>u.ativo).length,'Com acesso'],[us.filter(u=>dataDe(u.ultimoAcesso)>semana).length,'Ativos nos últimos 7 dias'],[soma('apostilas'),'Apostilas criadas'],[soma('pdfs'),'Arquivos baixados']].concat(AUTO() ? [[soma('usosIA'),'Usos da IA automática']] : [])
     .map(([n,r])=>`<div class="tile"><b>${n}</b><span>${r}</span></div>`).join('');
   const lista = us.filter(u=>!busca || ((u.nome||'')+' '+(u.usuario||'')).toLowerCase().includes(busca));
   if (!us.length){ $('#adm-lista').innerHTML = '<div class="vazio">Nenhum cliente ainda. Use “Cadastrar cliente”.</div>'; return; }
@@ -1182,10 +1184,10 @@ function renderAdm(){
     <div class="u-av" aria-hidden="true" style="display:grid;place-items:center;font-weight:700">${esc((u.nome||u.usuario||'?').slice(0,1).toUpperCase())}</div>
     <div class="u-quem"><b>${esc(u.nome||u.usuario)}</b><small>usuário: ${esc(u.usuario||'')}</small></div>
     <span class="chip ${u.ativo?'liberado':'bloqueado'}">${u.ativo?'Liberado':'Bloqueado'}</span>
-    <div class="u-num"><span><b>${u.creditos||0}</b> créditos</span><span><b>${u.apostilas||0}</b> apostilas</span><span><b>${u.usosIA||0}</b> usos de IA</span></div>
+    <div class="u-num">${AUTO()?`<span><b>${u.creditos||0}</b> créditos</span>`:''}<span><b>${u.apostilas||0}</b> apostilas</span><span><b>${u.pdfs||0}</b> downloads</span></div>
     <div class="u-quando"><small>Último acesso</small>${tempoRel(dataDe(u.ultimoAcesso))}</div>
     <div class="u-acoes">
-      <button class="btn peq" data-adm="cred" data-uid="${esc(u.id)}">+ créditos</button>
+      ${AUTO()?`<button class="btn peq" data-adm="cred" data-uid="${esc(u.id)}">+ créditos</button>`:''}
       ${u.ativo?`<button class="btn peq perigo" data-adm="bloq" data-uid="${esc(u.id)}">Bloquear</button>`:`<button class="btn peq pri" data-adm="lib" data-uid="${esc(u.id)}">Liberar</button>`}
     </div></div>`).join('');
 }
@@ -1195,7 +1197,7 @@ function cadastrarCliente(){
   <div class="campo"><label for="n-nome">Nome</label><input type="text" id="n-nome" placeholder="Ex.: Maria Souza"></div>
   <div class="linha2"><div class="campo"><label for="n-user">Usuário</label><input type="text" id="n-user" autocapitalize="none" spellcheck="false" placeholder="Ex.: maria.souza"></div>
   <div class="campo"><label for="n-senha">Senha</label><input type="text" id="n-senha" value="${Math.random().toString(36).slice(2,8)}"></div></div>
-  <div class="campo"><label for="n-cred">Créditos do modo automático</label><input type="number" id="n-cred" min="0" step="1" value="${+CFG.creditosIniciais||30}"></div>
+  <div class="campo"${AUTO()?'':' hidden'}><label for="n-cred">Créditos do modo automático</label><input type="number" id="n-cred" min="0" step="1" value="${AUTO() ? (+CFG.creditosIniciais||30) : 0}"></div>
   <div id="n-status"></div>
   <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn pri" id="n-ok">Cadastrar</button></div>`);
   const erro = m => { $('#n-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:4px 0 0">${m}</p>`; };
