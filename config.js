@@ -1,8 +1,18 @@
-// Configuração do site próprio. Deixe supabaseUrl vazio para o app abrir sem login (só modo semiautomático).
-// A "anon key" do Supabase é pública por natureza: pode ficar aqui. NUNCA coloque aqui a service_role key nem a chave da IA.
+// Configuração do site próprio (Firebase, igual ao app PNCD).
+// Estes dados do Firebase são públicos por natureza; a segurança fica nas regras (firestore.rules).
+// NUNCA coloque aqui a chave da IA: ela fica guardada como segredo da Cloud Function.
 window.APOSTILAS_CONFIG = {
-  supabaseUrl: '',      // ex.: 'https://abcdefgh.supabase.co'  (Supabase > Project Settings > API)
-  supabaseAnonKey: '',  // ex.: 'eyJhbGciOi...'                  (Supabase > Project Settings > API > anon public)
-  linkCompra: '',       // link da página de venda na Kiwify ou Hotmart (acesso vitalício)
-  linkCreditos: ''      // opcional: link de um produto de "créditos extras"
+  firebase: {
+    apiKey: 'AIzaSyBehgtz9NhAaMbKV8V-nABQArIIww_PL18',
+    authDomain: 'criador-apostilas-leo.firebaseapp.com',
+    projectId: 'criador-apostilas-leo',
+    storageBucket: 'criador-apostilas-leo.firebasestorage.app',
+    messagingSenderId: '193105518440',
+    appId: '1:193105518440:web:497a7393bfb10c235e40dd'
+  },
+  regiao: 'southamerica-east1',
+  // Usuários administradores (abrem o Painel admin). Se mudar aqui, mude também em firestore.rules e functions/index.js
+  admins: ['admin'],
+  creditosIniciais: 30,     // sugestão de créditos ao cadastrar um cliente
+  contato: ''               // opcional: link do seu WhatsApp ou página de venda, mostrado na tela de login
 };

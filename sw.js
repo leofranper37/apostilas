@@ -1,5 +1,5 @@
 // Service worker: deixa o app abrir rápido e funcionar mesmo sem internet
-const VERSAO = 'apostilas-v2';
+const VERSAO = 'apostilas-v3';
 const BASE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon.png'];
 
 self.addEventListener('install', e => {
@@ -15,8 +15,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // Login e créditos (Supabase) sempre direto da internet
-  if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) return;
+  // Login, banco e IA (Firebase) sempre direto da internet
+  if (/(^|\.)(firestore|identitytoolkit|securetoken)\.googleapis\.com$|\.cloudfunctions\.net$|\.run\.app$|\.firebaseapp\.com$/.test(url.hostname)) return;
   // Configuração: busca a nova primeiro; sem internet, usa a guardada
   if (url.origin === location.origin && url.pathname.endsWith('/config.js')) {
     e.respondWith(

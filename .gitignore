@@ -1,3 +1,5 @@
-supabase/.temp/
-supabase/.branches/
+node_modules/
+functions/node_modules/
+.firebase/
+*.log
 .env

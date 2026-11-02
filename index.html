@@ -1043,10 +1043,14 @@ function abrirIlustrar(t){
 }
 document.addEventListener('click', e=>{ const b = e.target.closest('[data-ilustrar]'); if (b) abrirIlustrar(b.dataset.ilustrar); });
 
-/* ---------- Site próprio: conta, acesso vitalício e créditos (Supabase) ---------- */
+/* ---------- Site próprio: login, créditos e painel admin (Firebase, como o app PNCD) ---------- */
 const CFG = window.APOSTILAS_CONFIG || {};
-const VENDA = {sb:null, sessao:null, cliente:null};
-const msgSemAuto = () => VENDA.sb ? 'Entre na sua conta para usar o modo automático' : 'Disponível na versão com conta';
+const FB_VER = '13.2.0';
+const VENDA = {on:false, fb:null, user:null, cliente:null, admin:false, lista:[], unsubLista:null, unsubEu:null};
+const DOMINIO = '@apostilas.local';
+const emailDe = u => String(u||'').trim().toLowerCase() + DOMINIO;
+const usuarioDe = e => String(e||'').replace(DOMINIO, '');
+const msgSemAuto = () => VENDA.on ? 'Peça créditos ao administrador para usar o modo automático' : 'Disponível na versão com conta';
 
 async function iaJSON(p){
   if (sample){ const r = await sample.json(p, {modelTier:'default'}); contar('usosIA'); return r; }
@@ -1057,100 +1061,215 @@ async function iaTexto(p, tier){
   return gerarServidor('svg', p);
 }
 async function gerarServidor(tipo, pedido){
-  if (!VENDA.sb) throw new Error('sem servidor');
-  const {data, error} = await VENDA.sb.functions.invoke('gerar', {body:{tipo, pedido}});
-  if (error){
-    let corpo = {}; try { corpo = await error.context.json(); } catch(_){}
-    const e = new Error(corpo.erro || 'falha'); e.code = corpo.erro; e.msg = corpo.mensagem;
-    if (VENDA.cliente && typeof corpo.creditos === 'number'){ VENDA.cliente.creditos = corpo.creditos; atualizarConta(); }
-    throw e;
+  if (!VENDA.on) throw new Error('sem servidor');
+  const {httpsCallable} = VENDA.fb.fn;
+  try {
+    const r = await httpsCallable(VENDA.fb.functions, 'gerar', {timeout: 300000})({tipo, pedido});
+    return r.data.texto; // o saldo atualiza sozinho pelo listener da conta
+  } catch(e){
+    const err = new Error('falha');
+    const cod = String(e && e.code || '').replace('functions/', '');
+    err.code = cod==='resource-exhausted' ? 'sem_credito' : cod==='unavailable' ? 'rate_limited' : cod;
+    err.msg = cod==='not-found' || cod==='internal' && /not.?found/i.test(e.message||'') ? 'O modo automático ainda não foi ativado no servidor. Use o Semiautomático.' : (e && e.message && cod!=='internal' ? e.message : '');
+    throw err;
   }
-  if (VENDA.cliente){ VENDA.cliente.creditos = data.creditos; VENDA.cliente.usos_ia = (VENDA.cliente.usos_ia||0) + 1; guardarCliente(); atualizarConta(); }
-  return data.texto;
 }
 
 const guardarCliente = () => { try { localStorage.setItem('apostilas-cliente', JSON.stringify(VENDA.cliente)); } catch(_){} };
 function atualizarConta(){
   const b = $('#b-conta');
-  if (!VENDA.sb || !VENDA.cliente || !VENDA.cliente.ativo){ b.hidden = true; return; }
-  b.hidden = false; b.textContent = `Minha conta · ${VENDA.cliente.creditos} ${VENDA.cliente.creditos===1?'crédito':'créditos'}`;
+  if (!VENDA.on || !VENDA.user){ b.hidden = true; $('#b-painel').hidden = true; return; }
+  b.hidden = false;
+  b.textContent = VENDA.admin ? 'Sair' : `Minha conta · ${VENDA.cliente?.creditos||0} ${(VENDA.cliente?.creditos||0)===1?'crédito':'créditos'}`;
+  $('#b-painel').hidden = !VENDA.admin;
 }
-
 function travaVenda(titulo, msg, extra){
   $('#trava-tit').textContent = titulo; $('#trava-msg').textContent = msg; $('#trava-extra').innerHTML = extra || ''; $('#trava').hidden = false;
 }
-const botaoComprar = () => CFG.linkCompra ? `<a class="btn ia" href="${esc(CFG.linkCompra)}" target="_blank" rel="noopener">Quero comprar o acesso</a>` : '';
+const contato = () => CFG.contato ? `<p class="dica-campo" style="margin:12px 0 0">Ainda não tem acesso? ${/^https?:/.test(CFG.contato) ? `<a href="${esc(CFG.contato)}" target="_blank" rel="noopener">Fale com a gente</a>` : esc(CFG.contato)}</p>` : '';
 
-function pedirLogin(enviadoPara){
-  if (enviadoPara){
-    travaVenda('Confira seu e-mail', `Enviamos um link de acesso para ${enviadoPara}. Abra o e-mail neste mesmo aparelho e toque no link. Se não chegar em 2 minutos, olhe a caixa de spam.`,
-      `<div class="modal-acoes"><button class="btn" id="v-voltar">Usar outro e-mail</button></div>`);
-    $('#v-voltar').onclick = ()=>pedirLogin();
-    return;
-  }
-  travaVenda('Entre na sua conta', 'Use o mesmo e-mail da compra. Enviamos um link de acesso, sem senha.',
-    `<div class="campo"><label for="v-email">Seu e-mail</label><input type="email" id="v-email" autocomplete="email" placeholder="voce@exemplo.com"></div>
-    <p class="dica-campo" id="v-erro" style="color:var(--danger);margin:0" hidden></p>
-    <div class="modal-acoes"><button class="btn pri" id="v-enviar">Enviar link de acesso</button>${botaoComprar()}</div>`);
-  const enviar = async ()=>{
-    const email = $('#v-email').value.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(email)){ $('#v-email').focus(); return; }
-    const bt = $('#v-enviar'); bt.disabled = true; bt.textContent = 'Enviando…';
-    const {error} = await VENDA.sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.origin + location.pathname}});
-    if (error){ bt.disabled = false; bt.textContent = 'Enviar link de acesso'; const e = $('#v-erro'); e.hidden = false;
-      e.textContent = /rate|seconds/i.test(error.message) ? 'Aguarde um minuto antes de pedir outro link.' : 'Não consegui enviar o link. Confira o e-mail e tente de novo.'; return; }
-    pedirLogin(email);
+function pedirLogin(erro){
+  travaVenda('Entrar', 'Use o usuário e a senha que você recebeu do administrador.',
+    `<div class="campo"><label for="v-user">Usuário</label><input type="text" id="v-user" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+    <div class="campo"><label for="v-senha">Senha</label><input type="password" id="v-senha" autocomplete="current-password"></div>
+    <p class="dica-campo" id="v-erro" style="color:var(--danger);margin:0"${erro?'':' hidden'}>${esc(erro||'')}</p>
+    <div class="modal-acoes"><button class="btn pri" id="v-entrar">Entrar</button></div>${contato()}`);
+  const entrar = async ()=>{
+    const u = $('#v-user').value.trim(), s = $('#v-senha').value;
+    if (!u){ $('#v-user').focus(); return; } if (!s){ $('#v-senha').focus(); return; }
+    const bt = $('#v-entrar'); bt.disabled = true; bt.textContent = 'Entrando…';
+    try { await VENDA.fb.au.signInWithEmailAndPassword(VENDA.fb.auth, emailDe(u), s); }
+    catch(e){
+      const c = e && e.code || '';
+      pedirLogin(c.includes('network') ? 'Sem internet. Confira a conexão e tente de novo.'
+        : c.includes('too-many') ? 'Muitas tentativas. Espere alguns minutos.'
+        : 'Usuário ou senha incorretos.');
+      $('#v-user').value = u;
+    }
   };
-  $('#v-enviar').onclick = enviar;
-  $('#v-email').onkeydown = e=>{ if (e.key==='Enter') enviar(); };
-  $('#v-email').focus();
+  $('#v-entrar').onclick = entrar;
+  $('#v-senha').onkeydown = e=>{ if (e.key==='Enter') entrar(); };
+  $('#v-user').onkeydown = e=>{ if (e.key==='Enter') $('#v-senha').focus(); };
+  ($('#v-user').value ? $('#v-senha') : $('#v-user')).focus();
 }
 
-function semAcesso(email){
-  travaVenda('Acesso não encontrado', `Não encontramos uma compra para ${email}. Se você acabou de comprar, a liberação pode levar alguns minutos. Confira se usou o mesmo e-mail da compra.`,
-    `<div class="modal-acoes"><button class="btn pri" id="v-de-novo">Já comprei, verificar de novo</button>${botaoComprar()}<button class="btn" id="v-sair">Usar outro e-mail</button></div>`);
-  $('#v-de-novo').onclick = ()=>carregarCliente(true);
-  $('#v-sair').onclick = ()=>VENDA.sb.auth.signOut();
+function liberarApp(){
+  $('#trava').hidden = true; iaDisp = VENDA.admin || (VENDA.cliente && VENDA.cliente.creditos > 0) || iaDisp;
+  if (iaDisp && modoIA!=='semi') modoIA = 'auto';
+  atualizarConta(); renderCapa(); renderEditor();
 }
 
-async function carregarCliente(avisar){
-  const u = VENDA.sessao && VENDA.sessao.user;
-  if (!u){ VENDA.cliente = null; iaDisp = false; atualizarConta(); pedirLogin(); return; }
-  const {data, error} = await VENDA.sb.from('clientes').select('*').eq('id', u.id).maybeSingle();
-  if (error){
+function aoMudarLogin(user){
+  const {doc, onSnapshot, updateDoc, serverTimestamp} = VENDA.fb.fs;
+  if (VENDA.unsubEu){ VENDA.unsubEu(); VENDA.unsubEu = null; }
+  if (VENDA.unsubLista){ VENDA.unsubLista(); VENDA.unsubLista = null; }
+  VENDA.user = user; VENDA.cliente = null; VENDA.admin = false;
+  if (!user){ iaDisp = false; atualizarConta(); $('#adm').hidden = true; pedirLogin(); return; }
+  VENDA.admin = (CFG.admins||[]).map(emailDe).includes(user.email);
+  if (VENDA.admin){ liberarApp(); return; }
+  let primeira = true;
+  VENDA.unsubEu = onSnapshot(doc(VENDA.fb.db, 'clientes', user.uid), s=>{
+    VENDA.cliente = s.exists() ? {id:s.id, ...s.data()} : null; guardarCliente();
+    if (!VENDA.cliente || !VENDA.cliente.ativo){
+      iaDisp = false; atualizarConta();
+      travaVenda(VENDA.cliente ? 'Acesso bloqueado' : 'Conta sem acesso', 'Fale com o administrador para liberar seu acesso.',
+        `<div class="modal-acoes"><button class="btn" id="v-sair">Sair</button></div>`);
+      $('#v-sair').onclick = ()=>VENDA.fb.au.signOut(VENDA.fb.auth);
+      return;
+    }
+    iaDisp = VENDA.cliente.creditos > 0;
+    if (primeira){ primeira = false; liberarApp(); updateDoc(s.ref, {ultimoAcesso: serverTimestamp()}).catch(()=>{}); }
+    else atualizarConta();
+  }, ()=>{
     // Sem internet: usa o último estado conhecido desta conta
     let c = null; try { c = JSON.parse(localStorage.getItem('apostilas-cliente')); } catch(_){}
-    if (c && c.id===u.id) VENDA.cliente = c;
-    else { travaVenda('Sem conexão', 'Não consegui verificar sua conta. Confira a internet e abra o app de novo.'); return; }
-  } else { VENDA.cliente = data; guardarCliente(); }
-  if (!VENDA.cliente || !VENDA.cliente.ativo){ iaDisp = false; atualizarConta(); semAcesso(u.email); if (avisar) aviso('Ainda não encontramos a compra.'); return; }
-  $('#trava').hidden = true; iaDisp = true; modoIA = 'auto';
-  atualizarConta(); renderCapa(); renderEditor();
-  if (!error) VENDA.sb.rpc('contar_uso', {campo:'acesso'}).then(()=>{}, ()=>{});
+    if (c && c.id===user.uid && c.ativo){ VENDA.cliente = c; liberarApp(); }
+    else travaVenda('Sem conexão', 'Não consegui verificar sua conta. Confira a internet e abra o app de novo.');
+  });
 }
 
 $('#b-conta').onclick = ()=>{
+  if (VENDA.admin){ VENDA.fb.au.signOut(VENDA.fb.auth); return; }
   const c = VENDA.cliente || {};
-  modal(`<h2>Minha conta</h2><p class="sub">${esc(c.email||'')}</p>
-  <div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usos_ia||0}</b><span>Usos da IA automática</span></div></div>
-  <p class="dica-campo">Acesso vitalício liberado. O modo Semiautomático é grátis e ilimitado; cada apostila, seção ou ilustração no modo Automático gasta 1 crédito.</p>
-  <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button>${CFG.linkCreditos?`<a class="btn ia" href="${esc(CFG.linkCreditos)}" target="_blank" rel="noopener">Comprar mais créditos</a>`:''}<button class="btn pri" data-fechar>Fechar</button></div>`);
-  $('#v-sair2').onclick = ()=>{ fecharModal(); VENDA.sb.auth.signOut(); };
+  modal(`<h2>Minha conta</h2><p class="sub">${esc(c.nome||'')} · usuário <b>${esc(c.usuario||usuarioDe(VENDA.user?.email))}</b></p>
+  <div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usosIA||0}</b><span>Usos da IA automática</span></div></div>
+  <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada apostila, seção ou ilustração no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>
+  <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn pri" data-fechar>Fechar</button></div>`);
+  $('#v-sair2').onclick = ()=>{ fecharModal(); VENDA.fb.au.signOut(VENDA.fb.auth); };
 };
 
-async function iniciarVenda(){
-  SEM_CREDITO = 'Seus créditos do modo automático acabaram. Use o modo Semiautomático, que é grátis e ilimitado' + (CFG.linkCreditos ? ', ou compre mais créditos em Minha conta.' : '.');
-  travaVenda('Carregando…', 'Verificando sua conta.');
-  let createClient;
-  try { ({createClient} = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')); }
-  catch(e){ travaVenda('Sem conexão', 'Não consegui carregar o sistema de login. Confira a internet e abra o app de novo.'); return; }
-  VENDA.sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}});
-  VENDA.sb.auth.onAuthStateChange((ev, sessao)=>{
-    const antes = VENDA.sessao && VENDA.sessao.user && VENDA.sessao.user.id;
-    VENDA.sessao = sessao;
-    if (ev==='TOKEN_REFRESHED' && antes===(sessao && sessao.user.id)) return;
-    setTimeout(()=>carregarCliente(), 0);
+/* --- Painel admin (cadastrar clientes, dar créditos, bloquear) --- */
+function abrirAdm(){
+  const {collection, onSnapshot, orderBy, query} = VENDA.fb.fs;
+  $('#adm').hidden = false;
+  if (!VENDA.unsubLista){
+    VENDA.unsubLista = onSnapshot(query(collection(VENDA.fb.db, 'clientes'), orderBy('criadoEm', 'desc')), s=>{
+      VENDA.lista = s.docs.map(d=>({id:d.id, ...d.data()})); renderAdm();
+    }, ()=>{ $('#adm-lista').innerHTML = '<div class="vazio">Não consegui carregar os clientes. Confira a internet.</div>'; });
+  }
+  renderAdm();
+}
+const dataDe = t => t && t.toDate ? t.toDate().getTime() : 0;
+function renderAdm(){
+  const us = VENDA.lista, semana = Date.now() - 7*864e5, busca = ($('#adm-busca').value||'').toLowerCase();
+  const soma = k => us.reduce((a,u)=>a + (+u[k]||0), 0);
+  $('#adm-tiles').innerHTML = [[us.length,'Clientes'],[us.filter(u=>u.ativo).length,'Com acesso'],[us.filter(u=>dataDe(u.ultimoAcesso)>semana).length,'Ativos nos últimos 7 dias'],[soma('apostilas'),'Apostilas criadas'],[soma('pdfs'),'Arquivos baixados'],[soma('usosIA'),'Usos da IA automática']]
+    .map(([n,r])=>`<div class="tile"><b>${n}</b><span>${r}</span></div>`).join('');
+  const lista = us.filter(u=>!busca || ((u.nome||'')+' '+(u.usuario||'')).toLowerCase().includes(busca));
+  if (!us.length){ $('#adm-lista').innerHTML = '<div class="vazio">Nenhum cliente ainda. Use “Cadastrar cliente”.</div>'; return; }
+  if (!lista.length){ $('#adm-lista').innerHTML = '<div class="vazio">Ninguém com esse nome.</div>'; return; }
+  $('#adm-lista').innerHTML = lista.map(u=>`<div class="u-linha">
+    <div class="u-av" aria-hidden="true" style="display:grid;place-items:center;font-weight:700">${esc((u.nome||u.usuario||'?').slice(0,1).toUpperCase())}</div>
+    <div class="u-quem"><b>${esc(u.nome||u.usuario)}</b><small>usuário: ${esc(u.usuario||'')}</small></div>
+    <span class="chip ${u.ativo?'liberado':'bloqueado'}">${u.ativo?'Liberado':'Bloqueado'}</span>
+    <div class="u-num"><span><b>${u.creditos||0}</b> créditos</span><span><b>${u.apostilas||0}</b> apostilas</span><span><b>${u.usosIA||0}</b> usos de IA</span></div>
+    <div class="u-quando"><small>Último acesso</small>${tempoRel(dataDe(u.ultimoAcesso))}</div>
+    <div class="u-acoes">
+      <button class="btn peq" data-adm="cred" data-uid="${esc(u.id)}">+ créditos</button>
+      ${u.ativo?`<button class="btn peq perigo" data-adm="bloq" data-uid="${esc(u.id)}">Bloquear</button>`:`<button class="btn peq pri" data-adm="lib" data-uid="${esc(u.id)}">Liberar</button>`}
+    </div></div>`).join('');
+}
+
+function cadastrarCliente(){
+  modal(`<h2>Cadastrar cliente</h2><p class="sub">Depois é só mandar o usuário e a senha para a pessoa, junto com o link do app.</p>
+  <div class="campo"><label for="n-nome">Nome</label><input type="text" id="n-nome" placeholder="Ex.: Maria Souza"></div>
+  <div class="linha2"><div class="campo"><label for="n-user">Usuário</label><input type="text" id="n-user" autocapitalize="none" spellcheck="false" placeholder="Ex.: maria.souza"></div>
+  <div class="campo"><label for="n-senha">Senha</label><input type="text" id="n-senha" value="${Math.random().toString(36).slice(2,8)}"></div></div>
+  <div class="campo"><label for="n-cred">Créditos do modo automático</label><input type="number" id="n-cred" min="0" step="1" value="${+CFG.creditosIniciais||30}"></div>
+  <div id="n-status"></div>
+  <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn pri" id="n-ok">Cadastrar</button></div>`);
+  const erro = m => { $('#n-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:4px 0 0">${m}</p>`; };
+  $('#n-user').oninput = e=>{ e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g,''); };
+  $('#n-nome').oninput = e=>{ const u = $('#n-user'); if (!u.dataset.mexeu) u.value = e.target.value.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,''); };
+  $('#n-user').addEventListener('keydown', e=>{ e.target.dataset.mexeu = 1; });
+  $('#n-ok').onclick = async ()=>{
+    const nome = $('#n-nome').value.trim(), usuario = $('#n-user').value.trim(), senha = $('#n-senha').value, cred = Math.max(0, Math.round(+$('#n-cred').value||0));
+    if (!nome) return $('#n-nome').focus(); if (usuario.length < 3) return erro('O usuário precisa de pelo menos 3 letras ou números.');
+    if (senha.length < 6) return erro('A senha precisa de pelo menos 6 caracteres.');
+    const bt = $('#n-ok'); bt.disabled = true; bt.textContent = 'Cadastrando…';
+    try {
+      // App secundário: cria a conta sem derrubar a sessão do administrador (mesmo truque do app PNCD)
+      const {initializeApp, getApps} = VENDA.fb.app, au = VENDA.fb.au;
+      const sec = getApps().find(a=>a.name==='cadastro') || initializeApp(CFG.firebase, 'cadastro');
+      const auth2 = au.getAuth(sec);
+      const cr = await au.createUserWithEmailAndPassword(auth2, emailDe(usuario), senha);
+      const {doc, setDoc, serverTimestamp} = VENDA.fb.fs;
+      await setDoc(doc(VENDA.fb.db, 'clientes', cr.user.uid), {nome, usuario, ativo:true, creditos:cred, usosIA:0, apostilas:0, pdfs:0, criadoEm:serverTimestamp(), ultimoAcesso:null});
+      await au.signOut(auth2);
+      const txt = `Seu acesso ao Criador de Apostilas:\n${location.origin + location.pathname}\nUsuário: ${usuario}\nSenha: ${senha}`;
+      modal(`<h2>Cliente cadastrado</h2><p class="sub">Mande estes dados para ${esc(nome)}:</p>
+        <div class="campo"><textarea id="n-txt" rows="4" readonly>${esc(txt)}</textarea></div>
+        <div class="modal-acoes"><button class="btn" id="n-copiar">Copiar</button>${/whats|zap/i.test(navigator.userAgent)?'':`<a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">Enviar no WhatsApp</a>`}<button class="btn pri" data-fechar>Pronto</button></div>`);
+      $('#n-copiar').onclick = ()=>navigator.clipboard.writeText(txt).then(()=>aviso('Copiado.'), ()=>$('#n-txt').select());
+    } catch(e){
+      bt.disabled = false; bt.textContent = 'Cadastrar';
+      const c = e && e.code || '';
+      erro(c.includes('email-already') ? 'Esse usuário já existe. Escolha outro.' : c.includes('operation-not-allowed') ? 'Ative o login por e-mail/senha no Firebase (Authentication > Método de login).' : 'Não consegui cadastrar. Confira a internet e tente de novo.');
+    }
+  };
+}
+
+function iniciarPainelAdm(){
+  document.body.insertAdjacentHTML('beforeend', `<section class="painel-tela" id="adm" hidden aria-label="Painel do administrador">
+  <div class="p-topo"><h2>Painel do administrador</h2><button class="btn" id="adm-fechar">Voltar ao app</button></div>
+  <div class="p-corpo"><div class="p-int">
+    <div class="tiles" id="adm-tiles"></div>
+    <div class="cartao"><h3>Clientes</h3>
+      <div class="filtros"><input type="search" id="adm-busca" placeholder="Buscar por nome ou usuário" aria-label="Buscar cliente"><button class="btn pri" id="adm-novo">+ Cadastrar cliente</button></div>
+      <div id="adm-lista"><div class="carregando">Carregando clientes…</div></div>
+    </div>
+  </div></div></section>`);
+  $('#adm-fechar').onclick = ()=>{ $('#adm').hidden = true; };
+  $('#adm-novo').onclick = cadastrarCliente;
+  $('#adm-busca').oninput = renderAdm;
+  $('#adm-lista').addEventListener('click', e=>{
+    const b = e.target.closest('[data-adm]'); if (!b) return;
+    const {doc, updateDoc, increment} = VENDA.fb.fs, ref = doc(VENDA.fb.db, 'clientes', b.dataset.uid);
+    const u = VENDA.lista.find(x=>x.id===b.dataset.uid) || {};
+    if (b.dataset.adm==='cred'){
+      modal(`<h2>Créditos para ${esc(u.nome||u.usuario)}</h2><p class="sub">Saldo atual: ${u.creditos||0}. Use um número negativo para tirar créditos.</p>
+        <div class="campo"><label for="c-qtd">Quantos créditos somar</label><input type="number" id="c-qtd" step="1" value="10"></div>
+        <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn pri" id="c-ok">Somar</button></div>`);
+      $('#c-ok').onclick = ()=>{ const n = Math.round(+$('#c-qtd').value||0); if (!n) return;
+        if ((u.creditos||0) + n < 0) return aviso('O saldo não pode ficar negativo.');
+        updateDoc(ref, {creditos: increment(n)}).then(()=>{ fecharModal(); aviso('Créditos atualizados.'); }, ()=>aviso('Não consegui salvar. Tente de novo.')); };
+    } else updateDoc(ref, {ativo: b.dataset.adm==='lib'}).then(()=>aviso(b.dataset.adm==='lib'?'Acesso liberado.':'Acesso bloqueado.'), ()=>aviso('Não consegui salvar. Tente de novo.'));
   });
+  $('#b-painel').onclick = abrirAdm;
+}
+
+async function iniciarVenda(){
+  VENDA.on = true;
+  SEM_CREDITO = 'Seus créditos do modo automático acabaram. Use o modo Semiautomático, que é grátis e ilimitado, ou peça mais créditos ao administrador.';
+  travaVenda('Carregando…', 'Verificando sua conta.');
+  const url = m => `https://www.gstatic.com/firebasejs/${FB_VER}/firebase-${m}.js`;
+  try {
+    const [app, au, fs, fn] = await Promise.all(['app','auth','firestore','functions'].map(m=>import(url(m))));
+    const fbApp = app.initializeApp(CFG.firebase);
+    VENDA.fb = {app, au, fs, fn, auth: au.getAuth(fbApp), db: fs.getFirestore(fbApp), functions: fn.getFunctions(fbApp, CFG.regiao || 'southamerica-east1')};
+  } catch(e){ travaVenda('Sem conexão', 'Não consegui carregar o sistema de login. Confira a internet e abra o app de novo.'); return; }
+  iniciarPainelAdm();
+  VENDA.fb.au.onAuthStateChanged(VENDA.fb.auth, aoMudarLogin);
 }
 
 /* ---------- Acesso e painel do administrador ---------- */
@@ -1197,7 +1316,7 @@ async function registrar(){
 
 let filaReg = Promise.resolve();
 function contar(campo){
-  if (VENDA.sb){ if (VENDA.cliente && campo!=='usosIA') VENDA.sb.rpc('contar_uso', {campo}).then(()=>{}, ()=>{}); return; }
+  if (VENDA.on){ if (VENDA.cliente && campo!=='usosIA'){ const {doc, updateDoc, increment} = VENDA.fb.fs; updateDoc(doc(VENDA.fb.db, 'clientes', VENDA.user.uid), {[campo]: increment(1)}).catch(()=>{}); } return; }
   if (!ACESSO.db || !ACESSO.eu || !ACESSO.registrado) return;
   ACESSO.eu[campo] = (ACESSO.eu[campo]||0) + 1;
   const patch = {[campo]:ACESSO.eu[campo], ultimoAcesso:Date.now(), ultimaApostila:(st.capa.titulo||'').slice(0,120)};
@@ -1210,7 +1329,7 @@ function statusDe(id){
 }
 
 function creditosIA(){
-  if (VENDA.sb) return VENDA.cliente && VENDA.cliente.ativo ? Math.max(0, +VENDA.cliente.creditos||0) : 0;
+  if (VENDA.on) return VENDA.admin ? Infinity : VENDA.cliente && VENDA.cliente.ativo ? Math.max(0, +VENDA.cliente.creditos||0) : 0;
   if (!ACESSO.db || ACESSO.dono || !(+ACESSO.cfg.limiteIA)) return Infinity;
   return Math.max(0, (+ACESSO.cfg.limiteIA) + (+(ACESSO.cfg.extras[ACESSO.id])||0) - (ACESSO.eu?.usosIA||0));
 }
@@ -1352,7 +1471,7 @@ if (window.claude && claude.use){
   claude.use('sample').then(s=>{ if (s){ sample = s; iaDisp = true; modoIA = 'auto'; renderCapa(); renderEditor(); } }).catch(()=>{});
   claude.use('downloads').then(d=>{ downloads = d; }).catch(()=>{});
   iniciarAcesso();
-} else if (CFG.supabaseUrl && CFG.supabaseAnonKey) iniciarVenda();
+} else if (CFG.firebase && CFG.firebase.apiKey) iniciarVenda();
 </script>
 </body>
 </html>

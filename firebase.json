@@ -1,0 +1,11 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [".git/**", ".firebase/**", "firebase.json", "firestore.rules", ".firebaserc", "**/.*", "**/node_modules/**", "functions/**", "scripts/**", "supabase/**", "*.md"],
+    "headers": [
+      { "source": "/@(sw.js|config.js|index.html)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+    ]
+  },
+  "firestore": { "rules": "firestore.rules" },
+  "functions": { "source": "functions", "runtime": "nodejs22" }
+}
