@@ -16,5 +16,5 @@ window.APOSTILAS_CONFIG = {
   // Modo automático com IA (pago: precisa do plano Blaze + chave da IA). false = tudo grátis
   modoAutomatico: false,
   creditosIniciais: 30,     // sugestão de créditos ao cadastrar um cliente (só com modoAutomatico)
-  contato: ''               // opcional: link do seu WhatsApp ou página de venda, mostrado na tela de login
+  contato: 'https://wa.me/5524992122018?text=Ol%C3%A1!%20Quero%20conhecer%20o%20Criador%20de%20Apostilas.'  // opcional: link do seu WhatsApp ou página de venda, mostrado na tela de login
 };
