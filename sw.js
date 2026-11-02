@@ -1,5 +1,5 @@
 // Service worker: deixa o app abrir rápido e funcionar mesmo sem internet
-const VERSAO = 'apostilas-v1';
+const VERSAO = 'apostilas-v2';
 const BASE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon.png'];
 
 self.addEventListener('install', e => {
@@ -14,6 +14,18 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // Login e créditos (Supabase) sempre direto da internet
+  if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) return;
+  // Configuração: busca a nova primeiro; sem internet, usa a guardada
+  if (url.origin === location.origin && url.pathname.endsWith('/config.js')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(r => { const c = r.clone(); caches.open(VERSAO).then(x => x.put(e.request, c)); return r; })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
   // Página: busca a versão nova primeiro; sem internet, usa a guardada
   if (e.request.mode === 'navigate') {
     e.respondWith(

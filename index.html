@@ -142,6 +142,8 @@ h3.sec:first-child{margin-top:0}
 .chip.adm{background:var(--soft);color:var(--accent)}
 .trava{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 .trava .modal{text-align:center;max-width:440px}
+.trava .campo{text-align:left;margin-top:14px}
+.trava .modal-acoes{justify-content:center}
 @media (max-width: 900px){
   .u-linha{grid-template-columns:40px 1fr auto;row-gap:8px}
   .u-num,.u-quando,.u-acoes{grid-column:2 / -1}
@@ -295,6 +297,7 @@ h3.sec:first-child{margin-top:0}
     <button class="btn ia" id="b-ia">✦ Criar com IA</button>
     <button class="btn" id="b-instalar" hidden>⤓ Instalar app</button>
     <button class="btn" id="b-painel" hidden>Painel admin</button>
+    <button class="btn" id="b-conta" hidden></button>
     <button class="btn" id="b-nova">Nova</button>
     <button class="btn" id="b-abrir">Abrir projeto</button>
     <button class="btn" id="b-salvar">Salvar projeto</button>
@@ -386,9 +389,10 @@ h3.sec:first-child{margin-top:0}
   </div></div>
 </section>
 
-<div class="trava" id="trava" hidden><div class="modal"><h2 id="trava-tit"></h2><p class="sub" id="trava-msg" style="margin:8px 0 0"></p></div></div>
+<div class="trava" id="trava" hidden><div class="modal"><h2 id="trava-tit"></h2><p class="sub" id="trava-msg" style="margin:8px 0 0"></p><div id="trava-extra"></div></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="config.js" onerror="window.APOSTILAS_CONFIG={}"></script>
 <script>
 const $ = s => document.querySelector(s);
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -564,7 +568,7 @@ const POSICOES = [['centro','Centralizada'],['esq','À esquerda, texto contorna'
 const BORDAS = [['arred','Cantos arredondados'],['nenhuma','Cantos retos'],['moldura','Moldura com sombra'],['circulo','Círculo']];
 function seletorImg(alvo, src, sugestao){
   const id = 'f-' + alvo.replace(/:/g,'-');
-  const botaoIA = iaDisp && alvo!=='capa' ? `<button class="btn peq ia" data-ilustrar="${alvo}">✦ Ilustrar com IA</button>` : '';
+  const botaoIA = alvo!=='capa' ? `<button class="btn peq ia" data-ilustrar="${alvo}">✦ Ilustrar com IA</button>` : '';
   return `<div class="img-alvo" data-drop="${alvo}">${src?`<img class="thumb" src="${src}" alt="">`:'<div class="vz" aria-hidden="true">＋</div>'}
   <div class="img-btns"><div class="fila"><label class="btn peq ${src?'':'pri'}" for="${id}">${src?'Trocar':'Escolher imagem'}</label><input type="file" accept="image/*" id="${id}" data-img="${alvo}" hidden>
   ${src?`<button class="btn peq" data-rot="${alvo}" title="Girar 90°">Girar ↻</button><button class="btn peq perigo" data-rem="${alvo}">Remover</button>`:botaoIA}</div>
@@ -715,7 +719,7 @@ document.addEventListener('paste', e=>{
 /* ---------- Capa e estilo ---------- */
 function renderCapa(){
   document.querySelectorAll('[data-capa]').forEach(el=>{ const v = st.capa[el.dataset.capa]; if (el.type==='checkbox') el.checked = !!v; else el.value = v ?? ''; });
-  $('#capa-img').innerHTML = seletorImg('capa', st.capa.imagem) + (iaDisp ? `<button class="btn peq ia" data-ilustrar="capa" style="margin:-2px 0 12px">✦ Ilustrar capa com IA</button>` : '');
+  $('#capa-img').innerHTML = seletorImg('capa', st.capa.imagem) + `<button class="btn peq ia" data-ilustrar="capa" style="margin:-2px 0 12px">✦ Ilustrar capa com IA</button>`;
   $('#cores').innerHTML = CORES.map(([c,n])=>`<button style="background:${c}" data-cor="${c}" aria-pressed="${st.capa.cor===c}" title="${n}" aria-label="${n}"></button>`).join('');
   $('#estilos').innerHTML = ESTILOS.map(([v,a,n])=>`<button data-fonte="${v}" aria-pressed="${st.capa.fonte===v}"><b class="ap-${v}" style="font-family:var(--ap-tit)">${a}</b><small>${n}</small></button>`).join('');
 }
@@ -886,7 +890,7 @@ function aplicarResultado(r, f, nova){
   } else st.blocos.push(...blocos);
   salvarLocal(); fecharModal(); renderCapa(); aba('cont'); vista('editar'); renderEditor();
   const nImg = blocos.filter(b=>b.tipo==='imagem'||b.tipo==='imgtexto').length;
-  aviso((nova?'Apostila criada.':'Seção adicionada no fim.') + (nImg?` ${nImg} ${nImg===1?'imagem sugerida':'imagens sugeridas'}: ${iaDisp?'use “Ilustrar com IA” ou ':''}coloque suas fotos.`:''));
+  aviso((nova?'Apostila criada.':'Seção adicionada no fim.') + (nImg?` ${nImg} ${nImg===1?'imagem sugerida':'imagens sugeridas'}: use “Ilustrar com IA” ou coloque suas fotos.`:''));
 }
 
 let modoIA = 'auto';
@@ -896,7 +900,7 @@ function abrirIA(modo){
   const f0 = abrirIA.ult || {};
   modal(`<h2>${nova?'Criar apostila':'Nova seção'}</h2>
   <div class="abas" role="tablist" style="margin:0 -20px 14px">
-    <button role="tab" data-modo="auto" aria-selected="${modoIA==='auto'}" ${iaDisp?'':'disabled title="Disponível na versão dentro do Claude"'}>⚡ Automático</button>
+    <button role="tab" data-modo="auto" aria-selected="${modoIA==='auto'}" ${iaDisp?'':`disabled title="${esc(msgSemAuto())}"`}>⚡ Automático</button>
     <button role="tab" data-modo="semi" aria-selected="${modoIA==='semi'}">✅ Semiautomático</button>
   </div>
   <p class="sub" id="ia-expl"></p>
@@ -944,10 +948,10 @@ function abrirIA(modo){
     abrirIA.ult = f;
     if (creditosIA() <= 0){ $('#ia-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${SEM_CREDITO}</p>`; return; }
     const bt = $('#ia-ir'); bt.disabled = true; $('#ia-status').innerHTML = '<div class="carregando">Escrevendo o conteúdo… isso pode levar alguns segundos.</div>';
-    try { const r = await sample.json(montarPrompt(f, nova), {modelTier:'default'}); contar('usosIA'); aplicarResultado(r, f, nova); }
+    try { const r = await iaJSON(montarPrompt(f, nova)); aplicarResultado(r, f, nova); }
     catch(e){
       bt.disabled = false;
-      const msg = e && e.code==='rate_limited' ? 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' : e && e.code==='not_granted' ? 'A IA não foi autorizada nesta página. Use o modo Semiautomático.' : 'Não consegui gerar o conteúdo. Tente de novo ou use o modo Semiautomático.';
+      const msg = e && e.code==='rate_limited' ? 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' : e && e.code==='sem_credito' ? SEM_CREDITO : e && e.msg ? esc(e.msg) : e && e.code==='not_granted' ? 'A IA não foi autorizada nesta página. Use o modo Semiautomático.' : 'Não consegui gerar o conteúdo. Tente de novo ou use o modo Semiautomático.';
       $('#ia-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${msg}</p>`;
     }
   }
@@ -970,37 +974,184 @@ function limparSVG(txt){
   svg.setAttribute('height', String(Math.round(1200*vb[3]/vb[2]) || 750));
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
 }
+const ESTILOS_IL = {didatico:'estilo de livro didático brasileiro: formas simples, cores chapadas e suaves, contornos discretos', infantil:'estilo infantil: formas arredondadas, cores vivas e alegres, personagens fofos se fizer sentido', esquema:'esquema explicativo: elementos simples, setas e rótulos curtos em português, fundo claro', colorir:'desenho para colorir: apenas contornos pretos grossos (stroke #000, stroke-width 3 a 5), fill branco ou none, sem cores, sem texto'};
+function promptSVG(d, est, t){
+  return `Crie uma ilustração em SVG para uma apostila escolar.
+Assunto: ${d}
+Estilo: ${ESTILOS_IL[est]}.
+Regras: um único elemento <svg> com xmlns e viewBox="0 0 800 ${t==='capa'?'500':'520'}"; sem <script>, sem <image>, sem fontes externas (use font-family="Arial, sans-serif" se houver texto, com textos em português e sem erros); desenhe com path, circle, rect, ellipse, polygon e gradientes simples; preencha bem a área; composição clara e reconhecível.
+Responda SOMENTE com o código SVG.`;
+}
 function abrirIlustrar(t){
   const a = alvo(t); if (!a) return;
   let sug = '';
   if (t==='capa') sug = `Ilustração de capa para uma apostila sobre ${st.capa.titulo}${st.capa.disciplina?' ('+st.capa.disciplina+')':''}`;
   else { const [k,id] = t.split(':'); const b = st.blocos.find(x=>x.id===id); sug = (b && (b.sugestao || b.legenda)) || ''; }
-  modal(`<h2>Ilustrar com IA</h2><p class="sub">A IA desenha uma ilustração simples, no estilo de livro didático (formas e cores chapadas). Funciona melhor para esquemas, objetos, mapas simples e cenas com poucos elementos.</p>
+  if (!iaDisp) modoIA = 'semi';
+  modal(`<h2>Ilustrar com IA</h2>
+  <div class="abas" role="tablist" style="margin:0 -20px 14px">
+    <button role="tab" data-modo="auto" aria-selected="${modoIA==='auto'}" ${iaDisp?'':`disabled title="${esc(msgSemAuto())}"`}>⚡ Automático</button>
+    <button role="tab" data-modo="semi" aria-selected="${modoIA==='semi'}">✅ Semiautomático</button>
+  </div>
+  <p class="sub" id="il-expl"></p>
   <div class="campo"><label for="il-desc">O que a ilustração deve mostrar</label><textarea id="il-desc" rows="3" placeholder="Ex.: uma pizza dividida em 8 fatias, com 3 fatias destacadas em laranja">${esc(sug)}</textarea></div>
   <div class="campo"><label for="il-est">Estilo</label><select id="il-est"><option value="didatico">Didático, cores suaves</option><option value="infantil">Infantil, colorido e arredondado</option><option value="esquema">Esquema com setas e rótulos</option><option value="colorir">Para colorir (só contornos pretos)</option></select></div>
+  <div id="il-semi"></div>
   <div id="il-status"></div>
-  <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn ia" id="il-ir">Desenhar</button></div>`);
+  <div class="modal-acoes" id="il-acoes"></div>`);
   if (st.capa.fonte==='infantil') $('#il-est').value = 'infantil';
-  $('#il-ir').onclick = async ()=>{
-    const d = $('#il-desc').value.trim(); if (!d){ $('#il-desc').focus(); return; }
-    if (creditosIA() <= 0){ $('#il-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${SEM_CREDITO}</p>`; return; }
-    const est = {didatico:'estilo de livro didático brasileiro: formas simples, cores chapadas e suaves, contornos discretos', infantil:'estilo infantil: formas arredondadas, cores vivas e alegres, personagens fofos se fizer sentido', esquema:'esquema explicativo: elementos simples, setas e rótulos curtos em português, fundo claro', colorir:'desenho para colorir: apenas contornos pretos grossos (stroke #000, stroke-width 3 a 5), fill branco ou none, sem cores, sem texto'}[$('#il-est').value];
-    const bt = $('#il-ir'); bt.disabled = true; $('#il-status').innerHTML = '<div class="carregando">Desenhando… pode levar até um minuto.</div>';
-    try {
-      const r = await sample(`Crie uma ilustração em SVG para uma apostila escolar.
-Assunto: ${d}
-Estilo: ${est}.
-Regras: um único elemento <svg> com xmlns e viewBox="0 0 800 ${t==='capa'?'500':'520'}"; sem <script>, sem <image>, sem fontes externas (use font-family="Arial, sans-serif" se houver texto, com textos em português e sem erros); desenhe com path, circle, rect, ellipse, polygon e gradientes simples; preencha bem a área; composição clara e reconhecível.
-Responda SOMENTE com o código SVG.`, {modelTier:'complex'});
-      contar('usosIA');
-      aplicarImg(t, limparSVG(r.text)); fecharModal(); aviso('Ilustração adicionada. Se não gostar, clique em Remover e tente outra descrição.');
-    } catch(e){
-      bt.disabled = false;
-      $('#il-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${e && e.code==='rate_limited' ? 'Muitos pedidos seguidos. Espere um minuto.' : 'Não consegui desenhar. Tente descrever com menos elementos.'}</p>`;
+  const erro = m => { $('#il-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 0">${m}</p>`; };
+  const desenhar = () => {
+    document.querySelectorAll('#modal-caixa [data-modo]').forEach(b=>b.setAttribute('aria-selected', b.dataset.modo===modoIA));
+    $('#il-status').innerHTML = '';
+    if (modoIA==='auto'){
+      const cr = creditosIA();
+      $('#il-expl').textContent = 'A IA desenha uma ilustração simples, no estilo de livro didático (formas e cores chapadas). Funciona melhor para esquemas, objetos, mapas simples e cenas com poucos elementos.' + (cr===Infinity ? '' : ` Créditos restantes: ${cr}.`);
+      $('#il-semi').innerHTML = '';
+      $('#il-acoes').innerHTML = '<button class="btn" data-fechar>Cancelar</button><button class="btn ia" id="il-ir">Desenhar</button>';
+      $('#il-ir').onclick = desenharAuto;
+    } else {
+      $('#il-expl').innerHTML = 'Grátis e sem limite, com Claude, ChatGPT ou Gemini. <b>1.</b> copie o pedido, <b>2.</b> cole na IA, <b>3.</b> cole aqui o código do desenho (começa com &lt;svg).';
+      $('#il-semi').innerHTML = '<div class="campo"><label for="il-resp">3. Desenho que a IA respondeu</label><textarea id="il-resp" rows="4" placeholder="Cole aqui o código, do <svg até o </svg>"></textarea></div>';
+      $('#il-acoes').innerHTML = '<button class="btn" data-fechar>Cancelar</button><button class="btn" id="il-copiar">1. Copiar pedido</button><button class="btn pri" id="il-usar">Usar desenho</button>';
+      $('#il-copiar').onclick = async ()=>{
+        const d = $('#il-desc').value.trim(); if (!d){ $('#il-desc').focus(); return; }
+        const p = promptSVG(d, $('#il-est').value, t);
+        try { await navigator.clipboard.writeText(p); $('#il-status').innerHTML = '<p class="dica-campo" style="margin:4px 0 0;color:var(--ink)">Pedido copiado. <b>2.</b> Cole numa conversa nova da sua IA, copie o código que ela responder e cole no campo acima.</p>'; }
+        catch(_){ $('#il-status').innerHTML = `<div class="campo"><label for="il-pedido">Copie este pedido manualmente</label><textarea id="il-pedido" rows="5" readonly>${esc(p)}</textarea></div>`; $('#il-pedido').select(); }
+      };
+      $('#il-usar').onclick = ()=>{
+        try { aplicarImg(t, limparSVG($('#il-resp').value)); fecharModal(); aviso('Ilustração adicionada. Se não gostar, clique em Remover e tente outra descrição.'); }
+        catch(_){ erro('Não reconheci o desenho. Copie a resposta inteira da IA, do &lt;svg até o &lt;/svg&gt;. Se a IA mostrou uma imagem em vez de código, peça: “me mande só o código SVG”.'); }
+      };
     }
   };
+  document.querySelectorAll('#modal-caixa [data-modo]').forEach(b=>b.onclick = ()=>{ if (b.disabled) return; modoIA = b.dataset.modo; desenhar(); });
+  async function desenharAuto(){
+    const d = $('#il-desc').value.trim(); if (!d){ $('#il-desc').focus(); return; }
+    if (creditosIA() <= 0){ erro(SEM_CREDITO); return; }
+    const bt = $('#il-ir'); bt.disabled = true; $('#il-status').innerHTML = '<div class="carregando">Desenhando… pode levar até um minuto.</div>';
+    try {
+      const svg = await iaTexto(promptSVG(d, $('#il-est').value, t), 'complex');
+      aplicarImg(t, limparSVG(svg)); fecharModal(); aviso('Ilustração adicionada. Se não gostar, clique em Remover e tente outra descrição.');
+    } catch(e){
+      bt.disabled = false;
+      erro(e && e.code==='rate_limited' ? 'Muitos pedidos seguidos. Espere um minuto.' : e && e.code==='sem_credito' ? SEM_CREDITO : e && e.msg ? esc(e.msg) : 'Não consegui desenhar. Tente descrever com menos elementos.');
+    }
+  }
+  desenhar();
 }
 document.addEventListener('click', e=>{ const b = e.target.closest('[data-ilustrar]'); if (b) abrirIlustrar(b.dataset.ilustrar); });
+
+/* ---------- Site próprio: conta, acesso vitalício e créditos (Supabase) ---------- */
+const CFG = window.APOSTILAS_CONFIG || {};
+const VENDA = {sb:null, sessao:null, cliente:null};
+const msgSemAuto = () => VENDA.sb ? 'Entre na sua conta para usar o modo automático' : 'Disponível na versão com conta';
+
+async function iaJSON(p){
+  if (sample){ const r = await sample.json(p, {modelTier:'default'}); contar('usosIA'); return r; }
+  return extrairJSON(await gerarServidor('json', p));
+}
+async function iaTexto(p, tier){
+  if (sample){ const r = await sample(p, {modelTier:tier}); contar('usosIA'); return r.text; }
+  return gerarServidor('svg', p);
+}
+async function gerarServidor(tipo, pedido){
+  if (!VENDA.sb) throw new Error('sem servidor');
+  const {data, error} = await VENDA.sb.functions.invoke('gerar', {body:{tipo, pedido}});
+  if (error){
+    let corpo = {}; try { corpo = await error.context.json(); } catch(_){}
+    const e = new Error(corpo.erro || 'falha'); e.code = corpo.erro; e.msg = corpo.mensagem;
+    if (VENDA.cliente && typeof corpo.creditos === 'number'){ VENDA.cliente.creditos = corpo.creditos; atualizarConta(); }
+    throw e;
+  }
+  if (VENDA.cliente){ VENDA.cliente.creditos = data.creditos; VENDA.cliente.usos_ia = (VENDA.cliente.usos_ia||0) + 1; guardarCliente(); atualizarConta(); }
+  return data.texto;
+}
+
+const guardarCliente = () => { try { localStorage.setItem('apostilas-cliente', JSON.stringify(VENDA.cliente)); } catch(_){} };
+function atualizarConta(){
+  const b = $('#b-conta');
+  if (!VENDA.sb || !VENDA.cliente || !VENDA.cliente.ativo){ b.hidden = true; return; }
+  b.hidden = false; b.textContent = `Minha conta · ${VENDA.cliente.creditos} ${VENDA.cliente.creditos===1?'crédito':'créditos'}`;
+}
+
+function travaVenda(titulo, msg, extra){
+  $('#trava-tit').textContent = titulo; $('#trava-msg').textContent = msg; $('#trava-extra').innerHTML = extra || ''; $('#trava').hidden = false;
+}
+const botaoComprar = () => CFG.linkCompra ? `<a class="btn ia" href="${esc(CFG.linkCompra)}" target="_blank" rel="noopener">Quero comprar o acesso</a>` : '';
+
+function pedirLogin(enviadoPara){
+  if (enviadoPara){
+    travaVenda('Confira seu e-mail', `Enviamos um link de acesso para ${enviadoPara}. Abra o e-mail neste mesmo aparelho e toque no link. Se não chegar em 2 minutos, olhe a caixa de spam.`,
+      `<div class="modal-acoes"><button class="btn" id="v-voltar">Usar outro e-mail</button></div>`);
+    $('#v-voltar').onclick = ()=>pedirLogin();
+    return;
+  }
+  travaVenda('Entre na sua conta', 'Use o mesmo e-mail da compra. Enviamos um link de acesso, sem senha.',
+    `<div class="campo"><label for="v-email">Seu e-mail</label><input type="email" id="v-email" autocomplete="email" placeholder="voce@exemplo.com"></div>
+    <p class="dica-campo" id="v-erro" style="color:var(--danger);margin:0" hidden></p>
+    <div class="modal-acoes"><button class="btn pri" id="v-enviar">Enviar link de acesso</button>${botaoComprar()}</div>`);
+  const enviar = async ()=>{
+    const email = $('#v-email').value.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)){ $('#v-email').focus(); return; }
+    const bt = $('#v-enviar'); bt.disabled = true; bt.textContent = 'Enviando…';
+    const {error} = await VENDA.sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.origin + location.pathname}});
+    if (error){ bt.disabled = false; bt.textContent = 'Enviar link de acesso'; const e = $('#v-erro'); e.hidden = false;
+      e.textContent = /rate|seconds/i.test(error.message) ? 'Aguarde um minuto antes de pedir outro link.' : 'Não consegui enviar o link. Confira o e-mail e tente de novo.'; return; }
+    pedirLogin(email);
+  };
+  $('#v-enviar').onclick = enviar;
+  $('#v-email').onkeydown = e=>{ if (e.key==='Enter') enviar(); };
+  $('#v-email').focus();
+}
+
+function semAcesso(email){
+  travaVenda('Acesso não encontrado', `Não encontramos uma compra para ${email}. Se você acabou de comprar, a liberação pode levar alguns minutos. Confira se usou o mesmo e-mail da compra.`,
+    `<div class="modal-acoes"><button class="btn pri" id="v-de-novo">Já comprei, verificar de novo</button>${botaoComprar()}<button class="btn" id="v-sair">Usar outro e-mail</button></div>`);
+  $('#v-de-novo').onclick = ()=>carregarCliente(true);
+  $('#v-sair').onclick = ()=>VENDA.sb.auth.signOut();
+}
+
+async function carregarCliente(avisar){
+  const u = VENDA.sessao && VENDA.sessao.user;
+  if (!u){ VENDA.cliente = null; iaDisp = false; atualizarConta(); pedirLogin(); return; }
+  const {data, error} = await VENDA.sb.from('clientes').select('*').eq('id', u.id).maybeSingle();
+  if (error){
+    // Sem internet: usa o último estado conhecido desta conta
+    let c = null; try { c = JSON.parse(localStorage.getItem('apostilas-cliente')); } catch(_){}
+    if (c && c.id===u.id) VENDA.cliente = c;
+    else { travaVenda('Sem conexão', 'Não consegui verificar sua conta. Confira a internet e abra o app de novo.'); return; }
+  } else { VENDA.cliente = data; guardarCliente(); }
+  if (!VENDA.cliente || !VENDA.cliente.ativo){ iaDisp = false; atualizarConta(); semAcesso(u.email); if (avisar) aviso('Ainda não encontramos a compra.'); return; }
+  $('#trava').hidden = true; iaDisp = true; modoIA = 'auto';
+  atualizarConta(); renderCapa(); renderEditor();
+  if (!error) VENDA.sb.rpc('contar_uso', {campo:'acesso'}).then(()=>{}, ()=>{});
+}
+
+$('#b-conta').onclick = ()=>{
+  const c = VENDA.cliente || {};
+  modal(`<h2>Minha conta</h2><p class="sub">${esc(c.email||'')}</p>
+  <div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usos_ia||0}</b><span>Usos da IA automática</span></div></div>
+  <p class="dica-campo">Acesso vitalício liberado. O modo Semiautomático é grátis e ilimitado; cada apostila, seção ou ilustração no modo Automático gasta 1 crédito.</p>
+  <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button>${CFG.linkCreditos?`<a class="btn ia" href="${esc(CFG.linkCreditos)}" target="_blank" rel="noopener">Comprar mais créditos</a>`:''}<button class="btn pri" data-fechar>Fechar</button></div>`);
+  $('#v-sair2').onclick = ()=>{ fecharModal(); VENDA.sb.auth.signOut(); };
+};
+
+async function iniciarVenda(){
+  SEM_CREDITO = 'Seus créditos do modo automático acabaram. Use o modo Semiautomático, que é grátis e ilimitado' + (CFG.linkCreditos ? ', ou compre mais créditos em Minha conta.' : '.');
+  travaVenda('Carregando…', 'Verificando sua conta.');
+  let createClient;
+  try { ({createClient} = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')); }
+  catch(e){ travaVenda('Sem conexão', 'Não consegui carregar o sistema de login. Confira a internet e abra o app de novo.'); return; }
+  VENDA.sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}});
+  VENDA.sb.auth.onAuthStateChange((ev, sessao)=>{
+    const antes = VENDA.sessao && VENDA.sessao.user && VENDA.sessao.user.id;
+    VENDA.sessao = sessao;
+    if (ev==='TOKEN_REFRESHED' && antes===(sessao && sessao.user.id)) return;
+    setTimeout(()=>carregarCliente(), 0);
+  });
+}
 
 /* ---------- Acesso e painel do administrador ---------- */
 const CFG_PADRAO = {modo:'aberto', limiteIA:0, status:{}, extras:{}};
@@ -1046,6 +1197,7 @@ async function registrar(){
 
 let filaReg = Promise.resolve();
 function contar(campo){
+  if (VENDA.sb){ if (VENDA.cliente && campo!=='usosIA') VENDA.sb.rpc('contar_uso', {campo}).then(()=>{}, ()=>{}); return; }
   if (!ACESSO.db || !ACESSO.eu || !ACESSO.registrado) return;
   ACESSO.eu[campo] = (ACESSO.eu[campo]||0) + 1;
   const patch = {[campo]:ACESSO.eu[campo], ultimoAcesso:Date.now(), ultimaApostila:(st.capa.titulo||'').slice(0,120)};
@@ -1058,10 +1210,11 @@ function statusDe(id){
 }
 
 function creditosIA(){
+  if (VENDA.sb) return VENDA.cliente && VENDA.cliente.ativo ? Math.max(0, +VENDA.cliente.creditos||0) : 0;
   if (!ACESSO.db || ACESSO.dono || !(+ACESSO.cfg.limiteIA)) return Infinity;
   return Math.max(0, (+ACESSO.cfg.limiteIA) + (+(ACESSO.cfg.extras[ACESSO.id])||0) - (ACESSO.eu?.usosIA||0));
 }
-const SEM_CREDITO = 'Seus créditos do modo automático acabaram. Use o modo Semiautomático, que é ilimitado, ou peça mais créditos ao administrador.';
+let SEM_CREDITO = 'Seus créditos do modo automático acabaram. Use o modo Semiautomático, que é ilimitado, ou peça mais créditos ao administrador.';
 
 function aplicarTrava(){
   const t = $('#trava');
@@ -1078,7 +1231,7 @@ function aplicarTrava(){
       ? 'Não consegui registrar seu pedido. Peça ao administrador para compartilhar o app com você com a permissão “Colaborador” e abra o link de novo.'
       : 'Seu pedido de acesso foi enviado. Assim que o administrador liberar, esta tela abre sozinha.'; }
   }
-  $('#trava-tit').textContent = titulo; $('#trava-msg').textContent = msg; t.hidden = false;
+  $('#trava-tit').textContent = titulo; $('#trava-msg').textContent = msg; $('#trava-extra').innerHTML = ''; t.hidden = false;
 }
 
 /* --- Painel --- */
@@ -1199,7 +1352,7 @@ if (window.claude && claude.use){
   claude.use('sample').then(s=>{ if (s){ sample = s; iaDisp = true; modoIA = 'auto'; renderCapa(); renderEditor(); } }).catch(()=>{});
   claude.use('downloads').then(d=>{ downloads = d; }).catch(()=>{});
   iniciarAcesso();
-}
+} else if (CFG.supabaseUrl && CFG.supabaseAnonKey) iniciarVenda();
 </script>
 </body>
 </html>

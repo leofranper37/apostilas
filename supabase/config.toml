@@ -1,0 +1,6 @@
+# A Kiwify/Hotmart não mandam login do Supabase; a função "compra" se protege com ?chave=
+[functions.compra]
+verify_jwt = false
+
+[functions.gerar]
+verify_jwt = true
