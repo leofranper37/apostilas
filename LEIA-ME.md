@@ -1,7 +1,8 @@
 # Criador de Apostilas (funciona como o app PNCD)
 
-**Endereço do app:** https://criador-apostilas-leo.web.app
-O mesmo app também abre em https://leofranper37.github.io/apostilas/
+**Página de vendas:** https://criador-apostilas-leo.web.app
+**App (login):** https://criador-apostilas-leo.web.app/app/
+Também abre em https://leofranper37.github.io/apostilas/ (app em /apostilas/app/)
 
 - O login é feito com **usuário e senha**, que o administrador cria no **Painel admin**.
 - O modo **Semiautomático** é grátis e ilimitado para todos os clientes liberados.
@@ -47,5 +48,8 @@ git add -A && git commit -m "atualizar" && git push
 O primeiro comando atualiza o .web.app. O `git push` atualiza o GitHub Pages.
 
 ## Trocar o usuário administrador
-O nome `admin` aparece em 3 lugares: `config.js` (admins), `firestore.rules` e `functions/index.js` (ADMINS).
+O nome `admin` aparece em 3 lugares: `app/config.js` (admins), `firestore.rules` e `functions/index.js` (ADMINS).
 Se mudar, mude nos 3 e publique de novo (`firebase deploy`).
+
+## Contato na página de vendas
+Em `app/config.js`, coloque em `contato` o link do seu WhatsApp (ex.: `https://wa.me/5524999999999`). Os botões "Quero acesso" passam a abrir o WhatsApp.

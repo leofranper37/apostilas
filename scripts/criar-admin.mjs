@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 const senha = process.argv[2];
 if (!senha || senha.length < 6) { console.log('Uso: node scripts/criar-admin.mjs SUA_SENHA   (mínimo 6 caracteres)'); process.exit(1); }
-const cfg = readFileSync(new URL('../config.js', import.meta.url), 'utf8');
+const cfg = readFileSync(new URL('../app/config.js', import.meta.url), 'utf8');
 const apiKey = cfg.match(/apiKey:\s*'([^']+)'/)[1];
 const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
