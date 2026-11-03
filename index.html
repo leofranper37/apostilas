@@ -205,7 +205,7 @@ dialog.pix::backdrop{background:rgba(20,24,33,.55)}
   <div class="planos">
     <div class="plano dest">
       <h3>Acesso vitalício</h3>
-      <div class="preco"><span class="v-preco">R$ 47</span><small>pagamento único</small></div>
+      <div class="preco"><span class="v-preco">A combinar</span><small id="v-obs">fale com a gente</small></div>
       <ul><li>Todos os modelos e estilos</li><li>IA escreve a apostila usando o ChatGPT, Claude ou Gemini que você já usa</li><li>Ilustrações grátis</li><li>PDF e HTML sem limite</li><li>Apostilas salvas na sua conta, no computador e no celular</li></ul>
       <div class="acoes-plano"><a class="btn pri" href="#planos" data-comprar>Comprar com Pix</a><a class="btn contato" href="app/">Tirar dúvidas</a></div>
       <p class="garantia">Garantia de 7 dias: se não gostar, devolvemos o seu dinheiro.</p>
@@ -223,7 +223,7 @@ dialog.pix::backdrop{background:rgba(20,24,33,.55)}
   <details><summary>Preciso pagar alguma IA?</summary><p>Não. No modo Semiautomático, o app prepara o pedido e você cola no ChatGPT, no Claude ou no Gemini, que têm versões grátis. Depois é só colar a resposta de volta.</p></details>
   <details><summary>Consigo editar tudo depois?</summary><p>Sim. Cada título, parágrafo, cartão, imagem e questão pode ser alterado, movido ou apagado.</p></details>
   <details><summary>Funciona no celular?</summary><p>Funciona. Dá para abrir no navegador ou instalar como app na tela inicial. Para montar apostilas longas, o computador é mais confortável.</p></details>
-  <details><summary>Como funciona a compra?</summary><p>Você paga por Pix, com o QR Code ou o código “copia e cola”, e manda o comprovante no nosso WhatsApp. Em seguida, você recebe um usuário e uma senha para entrar no app, normalmente no mesmo dia.</p></details>
+  <details><summary>Como funciona a compra?</summary><p>Chame a gente no WhatsApp pelo botão “Quero comprar” para combinar o valor. O pagamento é por Pix e, assim que ele for confirmado, você recebe um usuário e uma senha para entrar no app, normalmente no mesmo dia.</p></details>
   <details><summary>O que quer dizer “vitalício”?</summary><p>Você paga uma vez só e o acesso continua valendo, sem mensalidade, enquanto o app existir. Se um dia ele for encerrado, avisamos com pelo menos 90 dias de antecedência para você baixar tudo.</p></details>
   <details><summary>E se eu não gostar?</summary><p>Você tem 7 dias de garantia. É só pedir no WhatsApp e devolvemos o valor inteiro.</p></details>
   <details><summary>Minhas apostilas ficam guardadas?</summary><p>Sim, na sua conta. Entre com o seu usuário em qualquer computador ou celular e continue de onde parou. Só você vê o que criou.</p></details>
@@ -244,7 +244,7 @@ dialog.pix::backdrop{background:rgba(20,24,33,.55)}
   <div class="corpo">
     <button class="x" type="button" data-fechar aria-label="Fechar">×</button>
     <h3 id="pix-tit">Pagar com Pix</h3>
-    <p class="valor"><span class="v-preco">R$ 47</span> · acesso vitalício</p>
+    <p class="valor"><span class="v-preco">A combinar</span> · acesso vitalício</p>
     <div class="qr" id="pix-qr" aria-label="QR Code do Pix"></div>
     <label for="pix-codigo">Pix copia e cola</label>
     <div class="copia"><input id="pix-codigo" readonly><button class="btn pri" type="button" id="pix-copiar">Copiar</button></div>
@@ -267,7 +267,8 @@ if (c && /^https?:/.test(c)) document.querySelectorAll('a.contato').forEach(a=>{
 
 // Preço e compra por Pix (dados em app/config.js)
 const valor = +CFG.valor || 0, preco = 'R$ ' + (Number.isInteger(valor) ? valor : valor.toFixed(2).replace('.', ','));
-if (valor) document.querySelectorAll('.v-preco').forEach(e => e.textContent = preco);
+// sem valor no config: "A combinar" e a compra é combinada pelo WhatsApp
+if (valor){ document.querySelectorAll('.v-preco').forEach(e => e.textContent = preco); document.getElementById('v-obs').textContent = 'pagamento único'; }
 const pix = CFG.pix || {}, zap = String(CFG.whatsapp || '').replace(/\D/g, '');
 const linkZap = txt => zap ? `https://wa.me/${zap}?text=${encodeURIComponent(txt)}` : (c || 'app/');
 
@@ -283,7 +284,7 @@ function codigoPix(){
 }
 const dlg = document.getElementById('pix');
 document.querySelectorAll('[data-comprar]').forEach(b => {
-  if (!pix.chave){ b.textContent = 'Quero comprar'; b.href = linkZap(`Olá! Quero comprar o acesso vitalício ao Criador de Apostilas (${preco}).`); b.target = '_blank'; b.rel = 'noopener'; return; }
+  if (!pix.chave || !valor){ b.textContent = 'Quero comprar'; b.href = linkZap(valor ? `Olá! Quero comprar o acesso vitalício ao Criador de Apostilas (${preco}).` : 'Olá! Quero comprar o acesso vitalício ao Criador de Apostilas. Podemos combinar o valor?'); b.target = '_blank'; b.rel = 'noopener'; return; }
   b.addEventListener('click', e => {
     e.preventDefault();
     const cod = codigoPix(); document.getElementById('pix-codigo').value = cod;

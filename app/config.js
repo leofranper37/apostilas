@@ -20,7 +20,7 @@ window.APOSTILAS_CONFIG = {
   whatsapp: '5524992122018',  // só números, com 55 e DDD: recebe os comprovantes do Pix
 
   // Venda do acesso vitalício (página de vendas)
-  valor: 47,                  // em reais
+  valor: 0,                   // em reais; 0 = "A combinar" (o botão de compra abre o WhatsApp)
   // Pix: enquanto a chave estiver vazia, o botão de compra abre o WhatsApp
   pix: {
     chave: '',                // CPF, CNPJ, e-mail, celular (+5524...) ou chave aleatória

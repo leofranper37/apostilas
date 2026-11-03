@@ -4,6 +4,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 const Anthropic = require("@anthropic-ai/sdk");
 
 initializeApp();
@@ -53,6 +54,8 @@ exports.gerar = onCall(
         betas: ["server-side-fallback-2026-07-01"],
       });
       const msg = await stream.finalMessage();
+      // custo de cada uso (tokens), para calcular o preço dos créditos: veja em Functions > Registros
+      console.log("uso da IA", JSON.stringify({ tipo, modelo: msg.model, usage: msg.usage, admin: ehAdmin }));
       if (msg.stop_reason === "refusal") throw new Error("recusado");
       if (msg.stop_reason === "max_tokens") throw new Error("cortado");
       const texto = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
@@ -67,3 +70,32 @@ exports.gerar = onCall(
     }
   }
 );
+
+// Só o administrador: confere quem chamou e não deixa mexer em outra conta de administrador
+async function clienteDoAdmin(req) {
+  if (!req.auth || !ADMINS.includes(req.auth.token.email)) throw new HttpsError("permission-denied", "Só o administrador pode fazer isso.");
+  const uid = (req.data || {}).uid;
+  if (typeof uid !== "string" || !uid) throw new HttpsError("invalid-argument", "Cliente inválido.");
+  const u = await getAuth().getUser(uid).catch(() => null);
+  if (u && ADMINS.includes(u.email)) throw new HttpsError("permission-denied", "Não dá para mexer na conta do administrador.");
+  return { uid, u };
+}
+
+// Cliente esqueceu a senha: o administrador define uma nova (as sessões abertas dele são encerradas)
+exports.redefinirSenha = onCall({ region: "southamerica-east1", maxInstances: 5 }, async (req) => {
+  const { uid, u } = await clienteDoAdmin(req);
+  const senha = (req.data || {}).senha;
+  if (typeof senha !== "string" || senha.length < 6 || senha.length > 100) throw new HttpsError("invalid-argument", "A senha precisa de pelo menos 6 caracteres.");
+  if (!u) throw new HttpsError("not-found", "Essa conta não existe mais.");
+  await getAuth().updateUser(uid, { password: senha });
+  await getAuth().revokeRefreshTokens(uid);
+  return { ok: true };
+});
+
+// Excluir de vez um cliente: login, dados da conta e todas as apostilas e imagens
+exports.excluirCliente = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async (req) => {
+  const { uid, u } = await clienteDoAdmin(req);
+  await db.recursiveDelete(db.collection("clientes").doc(uid));
+  if (u) await getAuth().deleteUser(uid);
+  return { ok: true };
+});

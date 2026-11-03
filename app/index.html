@@ -1850,6 +1850,8 @@ function renderAdm(){
     <div class="u-acoes">
       ${AUTO()?`<button class="btn peq" data-adm="cred" data-uid="${esc(u.id)}">+ créditos</button>`:''}
       ${u.ativo?`<button class="btn peq perigo" data-adm="bloq" data-uid="${esc(u.id)}">Bloquear</button>`:`<button class="btn peq pri" data-adm="lib" data-uid="${esc(u.id)}">Liberar</button>`}
+      <button class="btn peq" data-adm="senha" data-uid="${esc(u.id)}">Nova senha</button>
+      <button class="btn peq perigo" data-adm="excluir" data-uid="${esc(u.id)}" title="Apaga a conta e todas as apostilas">Excluir</button>
     </div></div>`).join('');
 }
 
@@ -1909,6 +1911,41 @@ function iniciarPainelAdm(){
     const b = e.target.closest('[data-adm]'); if (!b) return;
     const {doc, updateDoc, increment} = VENDA.fb.fs, ref = doc(VENDA.fb.db, 'clientes', b.dataset.uid);
     const u = VENDA.lista.find(x=>x.id===b.dataset.uid) || {};
+    // Nova senha e Excluir rodam no servidor (Cloud Functions, plano Blaze)
+    const servidor = async (nome, dados) => { const {httpsCallable} = VENDA.fb.fn; return httpsCallable(VENDA.fb.functions, nome)(dados); };
+    const erroServidor = e => { const c = String(e && e.code || '').replace('functions/', '');
+      return c==='not-found' && !/conta/.test(e.message||'') || c==='internal' ? 'Essa função precisa do servidor (plano Blaze) publicado. Rode: firebase deploy --only functions' : (e && e.message) || 'Não consegui. Tente de novo.'; };
+    if (b.dataset.adm==='senha'){
+      const nova = Math.random().toString(36).slice(2, 8);
+      modal(`<h2>Nova senha para ${esc(u.nome||u.usuario)}</h2><p class="sub">Use quando o cliente esquecer a senha. Ele sai da conta nos aparelhos em que estiver logado.</p>
+        <div class="campo"><label for="ns-senha">Nova senha</label><input type="text" id="ns-senha" value="${nova}"></div>
+        <p class="dica-campo" id="ns-erro" style="color:var(--danger);margin:0" hidden></p>
+        <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn pri" id="ns-ok">Definir senha</button></div>`);
+      $('#ns-ok').onclick = async ()=>{
+        const senha = $('#ns-senha').value; const err = m => { $('#ns-erro').textContent = m; $('#ns-erro').hidden = false; };
+        if (senha.length < 6) return err('A senha precisa de pelo menos 6 caracteres.');
+        const bt = $('#ns-ok'); bt.disabled = true; bt.textContent = 'Salvando…';
+        try {
+          await servidor('redefinirSenha', {uid: u.id, senha});
+          const txt = `Sua nova senha do Criador de Apostilas:\n${location.origin + location.pathname}\nUsuário: ${u.usuario}\nSenha: ${senha}`;
+          modal(`<h2>Senha trocada</h2><p class="sub">Mande os novos dados para ${esc(u.nome||u.usuario)}:</p><div class="campo"><textarea id="ns-txt" rows="4" readonly>${esc(txt)}</textarea></div>
+            <div class="modal-acoes"><button class="btn" id="ns-copiar">Copiar</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">Enviar no WhatsApp</a><button class="btn pri" data-fechar>Pronto</button></div>`);
+          $('#ns-copiar').onclick = ()=>navigator.clipboard.writeText(txt).then(()=>aviso('Copiado.'), ()=>$('#ns-txt').select());
+        } catch(e){ bt.disabled = false; bt.textContent = 'Definir senha'; err(erroServidor(e)); }
+      };
+      return;
+    }
+    if (b.dataset.adm==='excluir'){
+      modal(`<h2>Excluir ${esc(u.nome||u.usuario)}?</h2><p class="sub">Apaga o login, a conta e <b>todas as apostilas</b> desse cliente, para sempre. Para só tirar o acesso, use “Bloquear”.</p>
+        <p class="dica-campo" id="ex2-erro" style="color:var(--danger);margin:0" hidden></p>
+        <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn perigo" id="ex2-ok">Excluir para sempre</button></div>`);
+      $('#ex2-ok').onclick = async ()=>{
+        const bt = $('#ex2-ok'); bt.disabled = true; bt.textContent = 'Excluindo…';
+        try { await servidor('excluirCliente', {uid: u.id}); fecharModal(); aviso('Cliente excluído.'); }
+        catch(e){ bt.disabled = false; bt.textContent = 'Excluir para sempre'; $('#ex2-erro').textContent = erroServidor(e); $('#ex2-erro').hidden = false; }
+      };
+      return;
+    }
     if (b.dataset.adm==='cred'){
       modal(`<h2>Créditos para ${esc(u.nome||u.usuario)}</h2><p class="sub">Saldo atual: ${u.creditos||0}. Use um número negativo para tirar créditos.</p>
         <div class="campo"><label for="c-qtd">Quantos créditos somar</label><input type="number" id="c-qtd" step="1" value="10"></div>

@@ -61,7 +61,7 @@ Se mudar, mude nos 3 e publique de novo (`firebase deploy`).
 
 ## Venda por Pix, Termos e Privacidade
 Tudo em `app/config.js`:
-- `valor`: preço do acesso vitalício (hoje 47).
+- `valor`: preço do acesso vitalício. Com `0` (como está hoje) a página mostra "A combinar" e o botão de compra abre o WhatsApp.
 - `pix`: `chave`, `nome` e `cidade` de quem recebe. Com a chave preenchida, o botão **Comprar com Pix** mostra o QR Code e o código copia e cola. Sem a chave, o botão abre o WhatsApp.
 - `whatsapp`: número (só dígitos, com 55 e DDD) que recebe os comprovantes.
 - `responsavel`: `nome`, `documento` (CPF ou CNPJ) e `email`. Aparecem nos Termos de Uso (`termos.html`) e na Política de Privacidade (`privacidade.html`).
