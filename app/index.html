@@ -974,32 +974,62 @@ body{margin:0;background:#e9ebef}.ap-folha{margin:24px auto;box-shadow:0 2px 12p
   salvarArquivo(nomeBase()+'.html', html).then(ok=>{ if (ok) contar('pdfs'); });
 };
 
+// Divide as folhas antes do html2pdf, em ordem: uma quebra que já cai no começo da folha não gera folha em branco,
+// e blocos e itens que passariam do fim da folha descem inteiros para a próxima
+function paginar(box){
+  const H = 267 * 96 / 25.4, folga = 6;   // altura útil da folha A4 (297 mm menos as margens de 14 e 16 mm), em px
+  const topo = el => el.getBoundingClientRect().top - box.getBoundingClientRect().top;
+  const empurra = (el, h) => { const pad = document.createElement('div'); pad.style.height = h + 'px'; el.parentNode.insertBefore(pad, el); };
+  box.querySelectorAll('.html2pdf__page-break, .ap-bloco, .ap-h1, .ap-h2, li').forEach(el=>{
+    const t = topo(el), r = t % H;
+    if (el.classList.contains('html2pdf__page-break')){
+      // conta a partir do fim do bloco anterior: a margem dele pode jogar a quebra para a folha seguinte, que ainda está vazia
+      el.classList.remove('html2pdf__page-break');
+      const ant = el.previousElementSibling, fim = ant ? topo(ant) + ant.getBoundingClientRect().height : t;
+      const pad = Math.ceil(Math.max(fim - folga, 0) / H) * H - t;
+      if (pad > 0) empurra(el, pad); return;
+    }
+    // um título nunca fica sozinho no pé da folha: leva junto um pedaço do que vem depois
+    const h = el.getBoundingClientRect().height + (el.matches('.ap-h1, .ap-h2') ? 90 : 0);
+    if (h < H - folga && r + h > H - 1) empurra(el, H - r);
+  });
+}
+
 $('#b-pdf').onclick = async ()=>{
   if (typeof html2pdf === 'undefined'){ aviso('O gerador de PDF não carregou. Use “Baixar HTML” e imprima como PDF.'); return; }
   const bt = $('#b-pdf'); bt.disabled = true; bt.textContent = 'Gerando PDF…';
   const d = renderDoc(st);
-  const box = document.createElement('div'); box.className = 'exportando'; box.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px';
+  // A posição fora da tela fica numa caixa externa: o html2pdf copia o estilo do elemento que recebe, e com left:-10000px o PDF saía em branco
+  const fora = document.createElement('div'); fora.style.cssText = 'position:fixed;left:-10000px;top:0';
+  const box = document.createElement('div'); box.className = 'exportando'; box.style.width = '210mm'; fora.appendChild(box);
   box.innerHTML = d.capa + (d.capa?'<div class="html2pdf__page-break"></div>':'') + d.corpo;
   box.querySelectorAll('.ap-conteudo').forEach(s=>{ s.style.minHeight='0'; s.style.padding='0 64px'; });
   box.querySelectorAll('.ap-capa').forEach(s=>{ s.style.height='1000px'; });
-  document.body.appendChild(box);
+  document.body.appendChild(fora);
   try {
     await document.fonts.ready;
+    // as alturas só valem depois que as imagens carregam
+    await Promise.all([...box.querySelectorAll('img')].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+    paginar(box);
+    // papel colorido (temas Aquarela e Bíblico): a última folha vai até o fim e as margens ganham a cor do papel
+    const sec = box.querySelector('.ap-conteudo'), cor = sec && getComputedStyle(sec).backgroundColor.match(/\d+/g).map(Number);
+    const papel = cor && cor.length === 3 && cor.some(c => c < 250) ? cor : null;
+    if (papel){ const H = 267 * 96 / 25.4, t = sec.offsetTop, h = sec.offsetHeight; sec.style.minHeight = (Math.ceil((t + h - 6) / H) * H - t - 2) + 'px'; }
     const temCapa = !!d.capa; const titulo = st.capa.titulo || '';
     const blob = await html2pdf().set({
       margin:[14,0,16,0], image:{type:'jpeg',quality:.95},
       html2canvas:{scale:2, backgroundColor:'#ffffff'},
       jsPDF:{unit:'mm', format:'a4', orientation:'portrait'},
-      pagebreak:{mode:['css','legacy'], avoid:['.ap-bloco','li','tr']}
+      pagebreak:{mode:[]}
     }).from(box).toPdf().get('pdf').then(pdf=>{
-      if (!st.capa.numeros) return;
       const n = pdf.internal.getNumberOfPages();
-      for (let i = temCapa?2:1; i<=n; i++){ pdf.setPage(i); pdf.setFontSize(8.5); pdf.setTextColor(130);
-        pdf.text(titulo, 17, 289); pdf.text(String(i), 193, 289, {align:'right'}); }
+      for (let i = temCapa?2:1; i<=n; i++){ pdf.setPage(i);
+        if (papel){ pdf.setFillColor(...papel); pdf.rect(0, 0, 210, 14.2, 'F'); pdf.rect(0, 280.8, 210, 16.2, 'F'); }
+        if (st.capa.numeros){ pdf.setFontSize(8.5); pdf.setTextColor(130); pdf.text(titulo, 17, 289); pdf.text(String(i), 193, 289, {align:'right'}); } }
     }).outputPdf('blob');
     if (await salvarArquivo(nomeBase()+'.pdf', blob)) contar('pdfs');
   } catch(e){ aviso('Não consegui gerar o PDF. Tente “Baixar HTML” e imprimir como PDF.'); }
-  finally { box.remove(); bt.disabled = false; bt.textContent = 'Baixar PDF'; }
+  finally { fora.remove(); bt.disabled = false; bt.textContent = 'Baixar PDF'; }
 };
 
 /* ---------- IA ---------- */
