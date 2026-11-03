@@ -9,7 +9,9 @@ service cloud.firestore {
 
     match /clientes/{uid} {
       allow read: if admin() || (logado() && request.auth.uid == uid);
-      allow create, delete: if admin();
+      allow create: if admin();
+      // o próprio cliente pode apagar a conta (LGPD: Minha conta > Excluir minha conta)
+      allow delete: if admin() || (logado() && request.auth.uid == uid);
       allow update: if admin()
         || (logado() && request.auth.uid == uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['apostilas', 'pdfs', 'ultimoAcesso'])

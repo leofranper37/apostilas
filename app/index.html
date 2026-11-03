@@ -1365,6 +1365,7 @@ function atualizarConta(){
 function travaVenda(titulo, msg, extra){
   $('#trava-tit').textContent = titulo; $('#trava-msg').textContent = msg; $('#trava-extra').innerHTML = extra || ''; $('#trava').hidden = false;
 }
+const legal = antes => `<p class="dica-campo" style="margin:10px 0 0">${antes} <a href="../termos.html" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="../privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</p>`;
 const contato = () => CFG.contato ? `<p class="dica-campo" style="margin:12px 0 0">Ainda não tem acesso? ${/^https?:/.test(CFG.contato) ? `<a href="${esc(CFG.contato)}" target="_blank" rel="noopener">Fale com a gente</a>` : esc(CFG.contato)}</p>` : '';
 
 function pedirLogin(erro){
@@ -1372,7 +1373,7 @@ function pedirLogin(erro){
     `<div class="campo"><label for="v-user">Usuário</label><input type="text" id="v-user" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
     <div class="campo"><label for="v-senha">Senha</label><input type="password" id="v-senha" autocomplete="current-password"></div>
     <p class="dica-campo" id="v-erro" style="color:var(--danger);margin:0"${erro?'':' hidden'}>${esc(erro||'')}</p>
-    <div class="modal-acoes"><button class="btn pri" id="v-entrar">Entrar</button></div>${contato()}`);
+    <div class="modal-acoes"><button class="btn pri" id="v-entrar">Entrar</button></div>${contato()}${legal('Ao entrar, você concorda com os')}`);
   const entrar = async ()=>{
     const u = $('#v-user').value.trim(), s = $('#v-senha').value;
     if (!u){ $('#v-user').focus(); return; } if (!s){ $('#v-senha').focus(); return; }
@@ -1482,10 +1483,49 @@ $('#b-conta').onclick = ()=>{
   ${AUTO() ? `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usosIA||0}</b><span>Usos da IA automática</span></div></div>
   <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada apostila, seção ou ilustração no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>` : `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.apostilas||0}</b><span>Apostilas criadas</span></div><div class="tile"><b>${c.pdfs||0}</b><span>Arquivos baixados</span></div></div>
   <p class="dica-campo">Use “Criar com IA” no modo Semiautomático: é grátis e ilimitado.</p>`}
-  <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn" id="v-senha2">Trocar senha</button><button class="btn pri" data-fechar>Fechar</button></div>`);
+  <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn" id="v-senha2">Trocar senha</button><button class="btn pri" data-fechar>Fechar</button></div>
+  ${legal('Veja os')}<p class="dica-campo" style="margin:6px 0 0"><button class="btn peq perigo" id="v-excluir" style="margin-top:4px">Excluir minha conta</button></p>`);
   $('#v-sair2').onclick = ()=>{ fecharModal(); sairDaConta(); };
   $('#v-senha2').onclick = trocarSenha;
+  $('#v-excluir').onclick = excluirConta;
 };
+
+// LGPD: o próprio cliente apaga a conta e tudo o que está nela
+function excluirConta(){
+  modal(`<h2>Excluir minha conta</h2><p class="sub">Isto apaga a sua conta e <b>todas as suas apostilas</b>, para sempre. Para guardar alguma, abra a apostila e use “Salvar projeto” ou “Baixar PDF” antes.</p>
+  <input type="text" autocomplete="username" value="${esc(usuarioDe(VENDA.user?.email))}" hidden>
+  <div class="campo"><label for="ex-senha">Digite sua senha para confirmar</label><input type="password" id="ex-senha" autocomplete="current-password"></div>
+  <p class="dica-campo" id="ex-erro" style="color:var(--danger);margin:0" hidden></p>
+  <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn perigo" id="ex-ok">Excluir para sempre</button></div>`);
+  const erro = m => { const e = $('#ex-erro'); e.textContent = m; e.hidden = false; };
+  $('#ex-ok').onclick = async ()=>{
+    const senha = $('#ex-senha').value; if (!senha){ $('#ex-senha').focus(); return; }
+    const bt = $('#ex-ok'); bt.disabled = true; bt.textContent = 'Excluindo…';
+    const au = VENDA.fb.au, u = VENDA.fb.auth.currentUser, {collection, getDocs, doc, deleteDoc} = VENDA.fb.fs, db = VENDA.fb.db;
+    try { await au.reauthenticateWithCredential(u, au.EmailAuthProvider.credential(u.email, senha)); }
+    catch(e){ bt.disabled = false; bt.textContent = 'Excluir para sempre'; const c = e && e.code || '';
+      return erro(c.includes('too-many') ? 'Muitas tentativas. Espere alguns minutos.' : c.includes('network') ? 'Sem internet. Confira a conexão.' : 'Senha incorreta.'); }
+    try {
+      // nada pendente pode voltar a gravar depois de apagar
+      clearTimeout(NUVEM.t); NUVEM.t = null; await NUVEM.fila;
+      if (VENDA.unsubEu){ VENDA.unsubEu(); VENDA.unsubEu = null; }
+      for (const sub of ['apostilas', 'imagens']){
+        const l = await getDocs(collection(db, 'clientes', u.uid, sub));
+        await Promise.all(l.docs.map(d => deleteDoc(d.ref)));
+      }
+      await deleteDoc(doc(db, 'clientes', u.uid));
+      ['apostila-v1', 'apostilas-cliente', 'apostilas-imgs-' + u.uid].forEach(k => { try { localStorage.removeItem(k); } catch(_){} });
+      await idbSet('apostila', null).catch(()=>{});
+      st = exemplo(); renderCapa(); renderEditor();
+      await au.deleteUser(u);
+      modal(`<h2>Conta excluída</h2><p class="sub">Sua conta e suas apostilas foram apagadas. Obrigado por ter usado o Criador de Apostilas.</p><div class="modal-acoes"><button class="btn pri" data-fechar>Fechar</button></div>`);
+    } catch(e){
+      console.warn('Exclusão da conta:', e);
+      bt.disabled = false; bt.textContent = 'Excluir para sempre';
+      erro('Não consegui excluir tudo. Confira a internet e tente de novo.');
+    }
+  };
+}
 
 /* --- Apostilas salvas na conta (Firestore) ---
    O texto de cada apostila fica em clientes/{uid}/apostilas/{id}. Cada imagem fica num documento próprio em

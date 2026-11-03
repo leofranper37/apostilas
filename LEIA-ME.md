@@ -59,5 +59,16 @@ O primeiro comando atualiza o .web.app. O `git push` atualiza o GitHub Pages.
 O nome `admin` aparece em 3 lugares: `app/config.js` (admins), `firestore.rules` e `functions/index.js` (ADMINS).
 Se mudar, mude nos 3 e publique de novo (`firebase deploy`).
 
+## Venda por Pix, Termos e Privacidade
+Tudo em `app/config.js`:
+- `valor`: preço do acesso vitalício (hoje 47).
+- `pix`: `chave`, `nome` e `cidade` de quem recebe. Com a chave preenchida, o botão **Comprar com Pix** mostra o QR Code e o código copia e cola. Sem a chave, o botão abre o WhatsApp.
+- `whatsapp`: número (só dígitos, com 55 e DDD) que recebe os comprovantes.
+- `responsavel`: `nome`, `documento` (CPF ou CNPJ) e `email`. Aparecem nos Termos de Uso (`termos.html`) e na Política de Privacidade (`privacidade.html`).
+
+Quando chegar um comprovante: confira o Pix no banco, cadastre o cliente no **Painel admin** e mande o usuário e a senha pelo WhatsApp.
+Reembolso (garantia de 7 dias): devolva o Pix e clique em **Bloquear** no painel.
+O próprio cliente pode apagar a conta e as apostilas em **Minha conta > Excluir minha conta** (direito previsto na LGPD).
+
 ## Contato na página de vendas
 Em `app/config.js`, coloque em `contato` o link do seu WhatsApp (ex.: `https://wa.me/5524999999999`). Os botões "Quero acesso" passam a abrir o WhatsApp.

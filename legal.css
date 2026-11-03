@@ -1,0 +1,22 @@
+/* Páginas de Termos de Uso e Política de Privacidade */
+:root{--bg:#f6f4ef;--ink:#17202e;--muted:#5d6878;--line:#e2ddd2;--accent:#2747d6;--marca:#ffd84d;--display:"Fraunces",Georgia,serif;--body:"Figtree",system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+header{border-bottom:1px solid var(--line);background:rgba(246,244,239,.92)}
+header .w{display:flex;align-items:center;gap:12px;height:64px}
+.w{max-width:780px;margin:0 auto;padding:0 20px}
+.logo{font-family:var(--display);font-weight:700;font-size:20px;display:flex;align-items:center;gap:9px;margin-right:auto;text-decoration:none;color:var(--ink)}
+.logo i{display:inline-block;width:22px;height:26px;border-radius:3px;background:var(--accent);position:relative}
+.logo i::after{content:"";position:absolute;left:4px;right:4px;top:8px;height:5px;background:var(--marca);border-radius:1px}
+main{padding:40px 0 56px}
+h1{font-family:var(--display);font-size:clamp(30px,4.4vw,42px);line-height:1.1;letter-spacing:-.015em;margin:0 0 8px}
+.data{color:var(--muted);margin:0 0 28px}
+h2{font-family:var(--display);font-size:22px;margin:32px 0 8px}
+p,li{color:#2c3646}
+ul{padding-left:22px}
+li{margin-bottom:6px}
+.caixa{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin:20px 0}
+footer{padding:24px 0 40px;color:var(--muted);font-size:14px;text-align:center;border-top:1px solid var(--line)}
+footer a{color:inherit}
