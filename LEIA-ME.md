@@ -21,6 +21,14 @@ Console: https://console.firebase.google.com/project/criador-apostilas-leo
    ```
 4. Abra o app e entre com o usuário **admin** e a sua senha. Para cadastrar clientes, vá em **Painel admin > Cadastrar cliente**.
 
+## Apostilas salvas na conta e troca de senha
+- Tudo o que o cliente edita é salvo sozinho na conta dele (aparece "✓ Salvo na sua conta" no topo).
+- Em **Minhas apostilas** ele abre, continua ou exclui as apostilas, em qualquer computador ou celular.
+- Ao entrar num aparelho novo, o app já abre a última apostila em que ele mexeu.
+- Em **Minha conta > Trocar senha**, o cliente (e o admin) troca a própria senha.
+- Só o dono vê as próprias apostilas; nem o admin vê o conteúdo.
+- Se um cliente esquecer a senha: por enquanto, cadastre um usuário novo para ele (redefinir a senha de outra pessoa exige o plano Blaze).
+
 ## Ligar o modo automático (IA)
 1. Mude o projeto para o plano **Blaze**, o mesmo do PNCD (no console, clique em **Fazer upgrade**).
    O Firebase cobra pouco ou nada nesse volume. O que você paga de verdade é a IA.

@@ -17,6 +17,26 @@ service cloud.firestore {
             && request.resource.data.get('pdfs', 0) >= resource.data.get('pdfs', 0));
     }
 
+    // Apostilas e imagens salvas na conta: só o dono lê e grava, e só enquanto o acesso estiver liberado
+    function dono(uid) { return logado() && request.auth.uid == uid; }
+    function liberado(uid) { return admin() || get(/databases/$(database)/documents/clientes/$(uid)).data.ativo == true; }
+
+    match /clientes/{uid}/apostilas/{id} {
+      allow read, delete: if dono(uid);
+      allow create, update: if dono(uid) && liberado(uid)
+        && request.resource.data.keys().hasOnly(['titulo', 'salvoEm', 'dados'])
+        && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 200
+        && request.resource.data.salvoEm is number
+        && request.resource.data.dados is string && request.resource.data.dados.size() < 900000;
+    }
+
+    match /clientes/{uid}/imagens/{h} {
+      allow read: if dono(uid);
+      allow create, update: if dono(uid) && liberado(uid)
+        && request.resource.data.keys().hasOnly(['src'])
+        && request.resource.data.src is string && request.resource.data.src.size() < 900000;
+    }
+
     match /{documento=**} {
       allow read, write: if false;
     }

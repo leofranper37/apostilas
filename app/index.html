@@ -45,6 +45,14 @@ button,input,select,textarea{font:inherit;color:inherit}
 .marca i{display:inline-block;width:22px;height:26px;border-radius:3px;background:var(--accent);position:relative}
 .marca i::after{content:"";position:absolute;left:4px;right:4px;top:8px;height:5px;background:var(--marca);border-radius:1px}
 .acoes{display:flex;gap:6px;flex-wrap:wrap}
+.nuvem{font-family:var(--body);font-size:12px;font-weight:500;letter-spacing:0;color:var(--muted);white-space:nowrap}
+.nuvem.alerta{color:var(--danger)}
+.mi-lista{display:flex;flex-direction:column;max-height:55vh;overflow:auto;margin:0 0 4px}
+.mi-linha{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--line)}
+.mi-linha:first-child{border-top:0}
+.mi-quem{flex:1;min-width:0}
+.mi-quem b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mi-quem small{color:var(--muted)}
 .btn{border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:500;font-size:14px;white-space:nowrap}
 .btn:hover{border-color:var(--accent)}
 .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -64,7 +72,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 .campo{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
 .campo label,.rot{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.campo input[type=text],.campo input[type=number],.campo select,.campo textarea{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:8px 10px;width:100%}
+.campo input[type=text],.campo input[type=password],.campo input[type=number],.campo select,.campo textarea{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:8px 10px;width:100%}
 .campo textarea{resize:vertical;min-height:70px;line-height:1.45}
 .dica-campo{font-size:12px;color:var(--muted);margin:-4px 0 10px}
 .linha2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -344,12 +352,13 @@ body.demo .zoom .ap-folha{box-shadow:none}
 <body data-vista="editar">
 
 <header class="topo">
-  <div class="marca"><i aria-hidden="true"></i>Criador de Apostilas</div>
+  <div class="marca"><i aria-hidden="true"></i>Criador de Apostilas <span class="nuvem" id="nuvem" role="status" hidden></span></div>
   <div class="acoes">
     <button class="btn ia" id="b-ia">✦ Criar com IA</button>
     <button class="btn" id="b-instalar" hidden>⤓ Instalar app</button>
     <button class="btn" id="b-painel" hidden>Painel admin</button>
     <button class="btn" id="b-conta" hidden></button>
+    <button class="btn" id="b-minhas" hidden>Minhas apostilas</button>
     <button class="btn" id="b-nova">Nova</button>
     <button class="btn" id="b-abrir">Abrir projeto</button>
     <button class="btn" id="b-salvar">Salvar projeto</button>
@@ -404,7 +413,7 @@ body.demo .zoom .ap-folha{box-shadow:none}
   </section>
 
   <section class="visual" aria-label="Pré-visualização">
-    <div class="visual-info"><span id="info-cont"></span><span>Pré-visualização A4 · salvo neste navegador</span></div>
+    <div class="visual-info"><span id="info-cont"></span><span>Pré-visualização A4 · <span id="info-onde">salvo neste navegador</span></span></div>
     <div class="zoom-caixa" id="zoom-caixa"><div class="zoom" id="zoom"></div></div>
   </section>
 </main>
@@ -639,9 +648,12 @@ const MODELOS = [
 
 const DEMO = new URLSearchParams(location.search).get('demo');
 let st = exemplo();
+const novoId = () => uid() + uid();
 let tSalvar, avisouCheio = false;
-function salvarLocal(){
+function salvarLocal(soAqui){
   if (DEMO) return;
+  if (!st.id) st.id = novoId();
+  if (soAqui !== true){ st.salvoEm = Date.now(); if (VENDA.user) st.dono = VENDA.user.uid; agendarNuvem(); }
   clearTimeout(tSalvar);
   tSalvar = setTimeout(async ()=>{
     const json = JSON.stringify(st);
@@ -654,7 +666,7 @@ async function carregarSalvo(){
   let s = null;
   try { const j = await Promise.race([idbGet('apostila'), new Promise(ok=>setTimeout(()=>ok(null), 1500))]); if (j) s = JSON.parse(j); } catch(e) {}
   if (!valido(s)) { try { s = JSON.parse(localStorage.getItem('apostila-v1')); } catch(e) {} }
-  if (valido(s)) st = {capa:{numFig:true, imagem:'', imagemEstilo:'destaque', ...s.capa}, blocos:s.blocos};
+  if (valido(s)) st = {capa:{numFig:true, imagem:'', imagemEstilo:'destaque', ...s.capa}, blocos:s.blocos, id:s.id || novoId(), salvoEm:s.salvoEm || 0, dono:s.dono};
 }
 
 /* ---------- Renderização da apostila ---------- */
@@ -896,7 +908,7 @@ document.addEventListener('paste', e=>{
 /* ---------- Capa e estilo ---------- */
 function renderCapa(){
   document.querySelectorAll('[data-capa]').forEach(el=>{ const v = st.capa[el.dataset.capa]; if (el.type==='checkbox') el.checked = !!v; else el.value = v ?? ''; });
-  $('#capa-img').innerHTML = seletorImg('capa', st.capa.imagem) + `<div class="fila" style="display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 12px"><button class="btn peq ia" data-gerarimg="capa">🎨 Gerar imagem grátis</button><button class="btn peq ia" data-ilustrar="capa">✦ Ilustrar capa com IA</button></div>`;
+  $('#capa-img').innerHTML = seletorImg('capa', st.capa.imagem) + `<div class="fila" style="display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 12px">${st.capa.imagem ? '<button class="btn peq ia" data-gerarimg="capa">🎨 Gerar imagem grátis</button>' : ''}<button class="btn peq ia" data-ilustrar="capa">✦ Ilustrar capa com IA</button></div>`;
   $('#cores').innerHTML = CORES.map(([c,n])=>`<button style="background:${c}" data-cor="${c}" aria-pressed="${st.capa.cor===c}" title="${n}" aria-label="${n}"></button>`).join('');
   $('#estilos').innerHTML = ESTILOS.map(([v,a,n])=>`<button data-fonte="${v}" aria-pressed="${st.capa.fonte===v}"><b class="ap-${v}" style="font-family:var(--ap-tit)">${a}</b><small>${n}</small></button>`).join('');
 }
@@ -935,11 +947,11 @@ function abrirPaleta(pos){
 $('#b-add').onclick = ()=>abrirPaleta();
 
 $('#b-nova').onclick = ()=>{
-  modal(`<h2>Nova apostila</h2><p class="sub">Escolha um modelo para começar e depois edite à vontade. A apostila atual será substituída: se quiser guardá-la, use “Salvar projeto” antes.</p>
+  modal(`<h2>Nova apostila</h2><p class="sub">Escolha um modelo para começar e depois edite à vontade. ${nuvemOn() ? 'A apostila atual continua guardada em “Minhas apostilas”.' : 'A apostila atual será substituída: se quiser guardá-la, use “Salvar projeto” antes.'}</p>
   <div class="modelos">${MODELOS.map((m,i)=>`<button data-modelo="${i}"><span class="em" aria-hidden="true">${m.em}</span><b>${m.nome}</b><small>${m.desc}</small></button>`).join('')}</div>
   <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button></div>`);
   $('#modal-caixa .modelos').onclick = e=>{ const bt = e.target.closest('[data-modelo]'); if (!bt) return;
-    st = MODELOS[+bt.dataset.modelo].fn(); contar('apostilas'); salvarLocal(); fecharModal(); renderCapa(); renderEditor(); aba(st.capa.mostrarCapa?'capa':'cont'); vista('editar');
+    descarregarNuvem(); st = MODELOS[+bt.dataset.modelo].fn(); contar('apostilas'); salvarLocal(); fecharModal(); renderCapa(); renderEditor(); aba(st.capa.mostrarCapa?'capa':'cont'); vista('editar');
     aviso('Modelo carregado. Troque os textos e as imagens pelos seus.'); };
 };
 
@@ -958,10 +970,10 @@ async function salvarArquivo(nome, dados){
 }
 const nomeBase = ()=> (st.capa.titulo||'apostila').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'apostila';
 
-$('#b-salvar').onclick = ()=>{ const limpo = JSON.parse(JSON.stringify(st)); limpo.blocos.forEach(b=>delete b._rec); salvarArquivo(nomeBase()+'.json', JSON.stringify({app:'criador-de-apostilas', versao:1, ...limpo}, null, 2)); };
+$('#b-salvar').onclick = ()=>{ const limpo = JSON.parse(JSON.stringify(st)); limpo.blocos.forEach(b=>delete b._rec); delete limpo.id; delete limpo.dono; delete limpo.salvoEm; salvarArquivo(nomeBase()+'.json', JSON.stringify({app:'criador-de-apostilas', versao:1, ...limpo}, null, 2)); };
 $('#b-abrir').onclick = ()=>$('#f-abrir').click();
 $('#f-abrir').onchange = e=>{ const f = e.target.files[0]; if(!f) return; f.text().then(t=>{
-  try { const d = JSON.parse(t); if(!d.capa || !Array.isArray(d.blocos)) throw 0; d.blocos = d.blocos.filter(b=>TIPOS[b.tipo]).map(b=>({...b, id:b.id||uid()})); st = {capa:{...exemplo().capa, ...d.capa}, blocos:d.blocos}; salvarLocal(); renderCapa(); renderEditor(); aviso('Projeto aberto.'); }
+  try { const d = JSON.parse(t); if(!d.capa || !Array.isArray(d.blocos)) throw 0; d.blocos = d.blocos.filter(b=>TIPOS[b.tipo]).map(b=>({...b, id:b.id||uid()})); descarregarNuvem(); st = {capa:{...exemplo().capa, ...d.capa}, blocos:d.blocos}; salvarLocal(); renderCapa(); renderEditor(); aviso('Projeto aberto.'); }
   catch(_){ aviso('Esse arquivo não é um projeto de apostila válido.'); }
   e.target.value=''; }); };
 
@@ -1104,7 +1116,7 @@ function aplicarResultado(r, f, nova){
   const blocos = normalizar(r && r.blocos);
   if (!blocos.length) throw new Error('vazio');
   if (nova){
-    contar('apostilas');
+    contar('apostilas'); descarregarNuvem(); st.id = novoId();
     st.blocos = blocos; st.capa.titulo = r.titulo || f.tema; st.capa.subtitulo = r.subtitulo || '';
     if (f.disc) st.capa.disciplina = f.disc; if (f.publico) st.capa.turma = f.publico;
   } else st.blocos.push(...blocos);
@@ -1345,9 +1357,9 @@ async function gerarServidor(tipo, pedido){
 const guardarCliente = () => { try { localStorage.setItem('apostilas-cliente', JSON.stringify(VENDA.cliente)); } catch(_){} };
 function atualizarConta(){
   const b = $('#b-conta');
-  if (!VENDA.on || !VENDA.user){ b.hidden = true; $('#b-painel').hidden = true; return; }
-  b.hidden = false;
-  b.textContent = VENDA.admin ? 'Sair' : !AUTO() ? 'Minha conta' : `Minha conta · ${VENDA.cliente?.creditos||0} ${(VENDA.cliente?.creditos||0)===1?'crédito':'créditos'}`;
+  if (!VENDA.on || !VENDA.user){ b.hidden = true; $('#b-painel').hidden = true; $('#b-minhas').hidden = true; $('#info-onde').textContent = 'salvo neste navegador'; return; }
+  b.hidden = false; $('#b-minhas').hidden = false; $('#info-onde').textContent = 'salvo na sua conta';
+  b.textContent = VENDA.admin ? 'Minha conta' : !AUTO() ? 'Minha conta' : `Minha conta · ${VENDA.cliente?.creditos||0} ${(VENDA.cliente?.creditos||0)===1?'crédito':'créditos'}`;
   $('#b-painel').hidden = !VENDA.admin;
 }
 function travaVenda(titulo, msg, extra){
@@ -1391,9 +1403,10 @@ function aoMudarLogin(user){
   if (VENDA.unsubEu){ VENDA.unsubEu(); VENDA.unsubEu = null; }
   if (VENDA.unsubLista){ VENDA.unsubLista(); VENDA.unsubLista = null; }
   VENDA.user = user; VENDA.cliente = null; VENDA.admin = false;
+  NUVEM.imgs = null; marcarNuvem('');
   if (!user){ iaDisp = false; atualizarConta(); $('#adm').hidden = true; pedirLogin(); return; }
   VENDA.admin = (CFG.admins||[]).map(emailDe).includes(user.email);
-  if (VENDA.admin){ liberarApp(); return; }
+  if (VENDA.admin){ liberarApp(); sincronizarAoEntrar(); return; }
   let primeira = true;
   VENDA.unsubEu = onSnapshot(doc(VENDA.fb.db, 'clientes', user.uid), s=>{
     VENDA.cliente = s.exists() ? {id:s.id, ...s.data()} : null; guardarCliente();
@@ -1405,7 +1418,7 @@ function aoMudarLogin(user){
       return;
     }
     iaDisp = AUTO() && VENDA.cliente.creditos > 0;
-    if (primeira){ primeira = false; liberarApp(); updateDoc(s.ref, {ultimoAcesso: serverTimestamp()}).catch(()=>{}); }
+    if (primeira){ primeira = false; liberarApp(); sincronizarAoEntrar(); updateDoc(s.ref, {ultimoAcesso: serverTimestamp()}).catch(()=>{}); }
     else atualizarConta();
   }, ()=>{
     // Sem internet: usa o último estado conhecido desta conta
@@ -1415,16 +1428,206 @@ function aoMudarLogin(user){
   });
 }
 
+async function sairDaConta(){
+  // o que ainda não subiu vai para a conta antes de sair
+  descarregarNuvem(); await NUVEM.fila;
+  VENDA.fb.au.signOut(VENDA.fb.auth);
+}
+
+function trocarSenha(){
+  modal(`<h2>Trocar senha</h2><p class="sub">Depois de trocar, use a nova senha para entrar em qualquer aparelho.</p>
+  <input type="text" autocomplete="username" value="${esc(usuarioDe(VENDA.user?.email))}" hidden>
+  <div class="campo"><label for="ts-atual">Senha atual</label><input type="password" id="ts-atual" autocomplete="current-password"></div>
+  <div class="linha2"><div class="campo"><label for="ts-nova">Nova senha</label><input type="password" id="ts-nova" autocomplete="new-password"></div>
+  <div class="campo"><label for="ts-nova2">Repita a nova senha</label><input type="password" id="ts-nova2" autocomplete="new-password"></div></div>
+  <p class="dica-campo" id="ts-erro" style="color:var(--danger);margin:0" hidden></p>
+  <div class="modal-acoes"><button class="btn" data-fechar>Cancelar</button><button class="btn pri" id="ts-ok">Trocar senha</button></div>`);
+  const erro = m => { const e = $('#ts-erro'); e.textContent = m; e.hidden = false; };
+  const ok = async ()=>{
+    const atual = $('#ts-atual').value, nova = $('#ts-nova').value, nova2 = $('#ts-nova2').value;
+    if (!atual){ $('#ts-atual').focus(); return; }
+    if (nova.length < 6) return erro('A nova senha precisa de pelo menos 6 caracteres.');
+    if (nova !== nova2) return erro('As duas novas senhas não são iguais.');
+    if (nova === atual) return erro('A nova senha precisa ser diferente da atual.');
+    const bt = $('#ts-ok'); bt.disabled = true; bt.textContent = 'Trocando…';
+    try {
+      const au = VENDA.fb.au, u = VENDA.fb.auth.currentUser;
+      await au.reauthenticateWithCredential(u, au.EmailAuthProvider.credential(u.email, atual));
+      await au.updatePassword(u, nova);
+      modal(`<h2>Senha trocada</h2><p class="sub">Da próxima vez que entrar, use a nova senha.</p><div class="modal-acoes"><button class="btn pri" data-fechar>Pronto</button></div>`);
+    } catch(e){
+      bt.disabled = false; bt.textContent = 'Trocar senha';
+      const c = e && e.code || '';
+      erro(/wrong-password|invalid-credential|invalid-login/.test(c) ? 'A senha atual está incorreta.'
+        : c.includes('too-many') ? 'Muitas tentativas. Espere alguns minutos.'
+        : c.includes('network') ? 'Sem internet. Confira a conexão e tente de novo.'
+        : c.includes('weak-password') ? 'Essa senha é fraca demais. Escolha outra.'
+        : 'Não consegui trocar a senha. Tente de novo.');
+    }
+  };
+  $('#ts-ok').onclick = ok;
+  $('#ts-nova2').onkeydown = e=>{ if (e.key==='Enter') ok(); };
+}
+
 $('#b-conta').onclick = ()=>{
-  if (VENDA.admin){ VENDA.fb.au.signOut(VENDA.fb.auth); return; }
+  if (VENDA.admin){
+    modal(`<h2>Minha conta</h2><p class="sub">Administrador · usuário <b>${esc(usuarioDe(VENDA.user?.email))}</b></p>
+    <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn" id="v-senha2">Trocar senha</button><button class="btn pri" data-fechar>Fechar</button></div>`);
+    $('#v-sair2').onclick = ()=>{ fecharModal(); sairDaConta(); };
+    $('#v-senha2').onclick = trocarSenha;
+    return;
+  }
   const c = VENDA.cliente || {};
   modal(`<h2>Minha conta</h2><p class="sub">${esc(c.nome||'')} · usuário <b>${esc(c.usuario||usuarioDe(VENDA.user?.email))}</b></p>
   ${AUTO() ? `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usosIA||0}</b><span>Usos da IA automática</span></div></div>
   <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada apostila, seção ou ilustração no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>` : `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.apostilas||0}</b><span>Apostilas criadas</span></div><div class="tile"><b>${c.pdfs||0}</b><span>Arquivos baixados</span></div></div>
   <p class="dica-campo">Use “Criar com IA” no modo Semiautomático: é grátis e ilimitado.</p>`}
-  <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn pri" data-fechar>Fechar</button></div>`);
-  $('#v-sair2').onclick = ()=>{ fecharModal(); VENDA.fb.au.signOut(VENDA.fb.auth); };
+  <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn" id="v-senha2">Trocar senha</button><button class="btn pri" data-fechar>Fechar</button></div>`);
+  $('#v-sair2').onclick = ()=>{ fecharModal(); sairDaConta(); };
+  $('#v-senha2').onclick = trocarSenha;
 };
+
+/* --- Apostilas salvas na conta (Firestore) ---
+   O texto de cada apostila fica em clientes/{uid}/apostilas/{id}. Cada imagem fica num documento próprio em
+   clientes/{uid}/imagens/{hash}, enviado uma vez só, e a apostila guarda só a referência (o limite do Firestore é 1 MB por documento).
+   As ilustrações que já vêm no app viram o nome delas. */
+const NUVEM = {fila:Promise.resolve(), t:null, imgs:null, estado:''};
+const nuvemOn = () => !!(VENDA.on && VENDA.user && (VENDA.admin || VENDA.cliente?.ativo));
+const REF_IMG = 'nuvem-img:', REF_ILUS = 'nuvem-ilus:', MAX_DOC = 900000;
+const colApostilas = () => VENDA.fb.fs.collection(VENDA.fb.db, 'clientes', VENDA.user.uid, 'apostilas');
+function marcarNuvem(estado){
+  NUVEM.estado = estado; const el = $('#nuvem'); if (!el) return;
+  const txt = {pendente:'Salvando…', salvando:'Salvando…', ok:'✓ Salvo na sua conta', offline:'Sem internet: salvo só neste aparelho', erro:'Não consegui salvar na conta', grande:'Grande demais para a conta: use “Salvar projeto”'}[estado];
+  el.hidden = !txt || !VENDA.on; el.textContent = txt || ''; el.classList.toggle('alerta', estado==='erro' || estado==='grande');
+}
+async function hashDe(txt){ const b = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+async function trocarTextos(o, fn){
+  for (const k of Object.keys(o)){ const v = o[k];
+    if (typeof v === 'string') o[k] = await fn(v);
+    else if (v && typeof v === 'object') await trocarTextos(v, fn); }
+  return o;
+}
+// imagem grande demais para um documento: diminui até caber
+async function caberNoDoc(src){
+  if (src.length < MAX_DOC) return src;
+  const img = await carregarImg(src); let lado = 1600, q = .8, r = src;
+  while (r.length >= MAX_DOC && lado >= 300){
+    const k = Math.min(1, lado/Math.max(img.width, img.height)), cv = document.createElement('canvas');
+    cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+    const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(img,0,0,cv.width,cv.height);
+    r = cv.toDataURL('image/jpeg', q); if (q > .55) q -= .1; else lado = Math.round(lado*.75);
+  }
+  return r.length < MAX_DOC ? r : '';
+}
+// fotografia da apostila no momento em que foi pedida (a apostila aberta pode mudar enquanto envia)
+const fotoNuvem = () => { const d = JSON.parse(JSON.stringify(st)); d.blocos.forEach(b=>delete b._rec);
+  const f = {uid:VENDA.user.uid, id:st.id, salvoEm:st.salvoEm || Date.now(), titulo:(st.capa.titulo||'').trim().slice(0,200) || 'Sem título', d};
+  delete d.id; delete d.salvoEm; delete d.dono; return f; };
+function enfileirarNuvem(){ if (!nuvemOn() || !st.id) return; const f = fotoNuvem(); NUVEM.fila = NUVEM.fila.then(()=>enviarNuvem(f)); }
+function agendarNuvem(){ if (!nuvemOn()) return; clearTimeout(NUVEM.t); marcarNuvem('pendente'); NUVEM.t = setTimeout(()=>{ NUVEM.t = null; enfileirarNuvem(); }, 2500); }
+function descarregarNuvem(){ if (NUVEM.t){ clearTimeout(NUVEM.t); NUVEM.t = null; enfileirarNuvem(); } }
+async function enviarNuvem(f){
+  if (!VENDA.user || VENDA.user.uid !== f.uid) return;
+  if (!navigator.onLine){ marcarNuvem('offline'); return; }
+  const {doc, setDoc} = VENDA.fb.fs, db = VENDA.fb.db;
+  if (!NUVEM.imgs){ try { NUVEM.imgs = new Set(JSON.parse(localStorage.getItem('apostilas-imgs-' + f.uid)) || []); } catch(_){ NUVEM.imgs = new Set(); } }
+  const ilus = new Map(Object.entries(ILUS).map(([k,v])=>[v,k]));
+  marcarNuvem('salvando');
+  try {
+    await trocarTextos(f.d, async v => {
+      if (!v.startsWith('data:image/') || v.length < 3000) return v;   // ícones pequenos ficam no próprio texto
+      if (ilus.has(v)) return REF_ILUS + ilus.get(v);
+      const h = await hashDe(v);
+      if (!NUVEM.imgs.has(h)){
+        const src = await caberNoDoc(v); if (!src) return '';
+        await setDoc(doc(db, 'clientes', f.uid, 'imagens', h), {src});
+        NUVEM.imgs.add(h); try { localStorage.setItem('apostilas-imgs-' + f.uid, JSON.stringify([...NUVEM.imgs])); } catch(_){}
+        idbSet('img:' + h, v).catch(()=>{});
+      }
+      return REF_IMG + h;
+    });
+    const dados = JSON.stringify(f.d);
+    if (dados.length >= MAX_DOC){ marcarNuvem('grande'); return; }
+    await setDoc(doc(db, 'clientes', f.uid, 'apostilas', f.id), {titulo:f.titulo, salvoEm:f.salvoEm, dados});
+    if (!NUVEM.t) marcarNuvem('ok');
+  } catch(e){ console.warn('Não salvou na conta:', e); marcarNuvem(navigator.onLine ? 'erro' : 'offline'); }
+}
+window.addEventListener('online', ()=>{ if (['offline','erro'].includes(NUVEM.estado)) agendarNuvem(); });
+
+// transforma o documento da conta de volta em apostila, buscando as imagens (primeiro no aparelho, depois na conta)
+async function apostilaDoDoc(snap){
+  const {doc, getDoc} = VENDA.fb.fs, uidU = VENDA.user.uid, x = snap.data(), d = JSON.parse(x.dados), refs = new Set();
+  await trocarTextos(d, async v => { if (v.startsWith(REF_IMG)) refs.add(v.slice(REF_IMG.length)); return v; });
+  const imgs = {};
+  await Promise.all([...refs].map(async h => {
+    let src = await idbGet('img:' + h).catch(()=>null);
+    if (!src){ const i = await getDoc(doc(VENDA.fb.db, 'clientes', uidU, 'imagens', h)); src = i.exists() ? i.data().src : ''; if (src) idbSet('img:' + h, src).catch(()=>{}); }
+    imgs[h] = src;
+  }));
+  await trocarTextos(d, async v => v.startsWith(REF_IMG) ? (imgs[v.slice(REF_IMG.length)] || '') : v.startsWith(REF_ILUS) ? (ILUS[v.slice(REF_ILUS.length)] || '') : v);
+  if (!valido(d)) throw new Error('invalida');
+  return {capa:{numFig:true, imagem:'', imagemEstilo:'destaque', ...d.capa}, blocos:d.blocos, id:snap.id, salvoEm:x.salvoEm || 0, dono:uidU};
+}
+function mostrarApostila(nova){
+  st = nova; salvarLocal(true); renderCapa(); renderEditor(); aba(st.capa.mostrarCapa ? 'capa' : 'cont'); vista('editar');
+}
+
+// Ao entrar: continua de onde parou, mesmo que tenha sido em outro aparelho
+async function sincronizarAoEntrar(){
+  await PRONTO;
+  if (!VENDA.user) return;
+  const {doc, getDoc, getDocs, query, orderBy, limit} = VENDA.fb.fs, eu = VENDA.user.uid;
+  const minha = st.id && st.salvoEm && (!st.dono || st.dono === eu), antes = st;
+  // se a pessoa já mexeu enquanto a conta respondia, o que ela fez vale mais
+  const intocada = () => st === antes && !NUVEM.t;
+  try {
+    if (minha){
+      const s = await getDoc(doc(colApostilas(), st.id)), nuvem = s.exists() ? (s.data().salvoEm || 0) : -1;
+      if (!intocada()) return;
+      if (nuvem > st.salvoEm){ mostrarApostila(await apostilaDoDoc(s)); marcarNuvem('ok'); aviso('Abrimos a versão mais nova desta apostila, salva em outro aparelho.'); }
+      else if (nuvem < st.salvoEm){ st.dono = eu; enfileirarNuvem(); }
+      else marcarNuvem('ok');
+      return;
+    }
+    const q = await getDocs(query(colApostilas(), orderBy('salvoEm', 'desc'), limit(1)));
+    if (!intocada()) return;
+    if (!q.empty){ mostrarApostila(await apostilaDoDoc(q.docs[0])); marcarNuvem('ok'); aviso('Abrimos sua última apostila. As outras estão em “Minhas apostilas”.'); }
+    else if (st.dono && st.dono !== eu) mostrarApostila({...exemplo(), id:novoId(), salvoEm:0}); // a apostila neste aparelho é de outra conta
+  } catch(e){ marcarNuvem(navigator.onLine ? 'erro' : 'offline'); }
+}
+
+async function abrirMinhas(){
+  modal(`<h2>Minhas apostilas</h2><p class="sub">Ficam salvas na sua conta. Entre com o mesmo usuário em qualquer computador ou celular para continuar de onde parou.</p>
+  <div id="mi-lista" class="mi-lista"><div class="carregando">Carregando suas apostilas…</div></div>
+  <div class="modal-acoes"><button class="btn" data-fechar>Fechar</button><button class="btn pri" id="mi-nova">+ Nova apostila</button></div>`);
+  $('#mi-nova').onclick = ()=>{ fecharModal(); $('#b-nova').click(); };
+  const lista = $('#mi-lista');
+  const {getDocs, query, orderBy, doc, deleteDoc} = VENDA.fb.fs;
+  descarregarNuvem(); await NUVEM.fila;
+  let docs;
+  try { docs = (await getDocs(query(colApostilas(), orderBy('salvoEm', 'desc')))).docs; }
+  catch(e){ lista.innerHTML = '<div class="vazio">Não consegui carregar suas apostilas. Confira a internet e tente de novo.</div>'; return; }
+  if (!lista.isConnected) return;
+  if (!docs.length){ lista.innerHTML = '<div class="vazio">Nenhuma apostila salva ainda. Elas aparecem aqui assim que você começa a editar.</div>'; return; }
+  lista.innerHTML = docs.map(d=>{ const x = d.data(), aberta = d.id === st.id;
+    return `<div class="mi-linha"><div class="mi-quem"><b>${esc(x.titulo || 'Sem título')}</b><small>${aberta ? 'Aberta agora · ' : ''}editada ${tempoRel(x.salvoEm)}</small></div>
+    ${aberta ? '' : `<button class="btn peq perigo" data-mi="del" data-id="${esc(d.id)}">Excluir</button><button class="btn peq pri" data-mi="abrir" data-id="${esc(d.id)}">Abrir</button>`}</div>`; }).join('');
+  lista.onclick = async e=>{
+    const b = e.target.closest('[data-mi]'); if (!b) return;
+    const snap = docs.find(d=>d.id===b.dataset.id); if (!snap) return;
+    if (b.dataset.mi === 'del'){
+      if (!b.dataset.certeza){ b.dataset.certeza = 1; b.textContent = 'Excluir mesmo?'; return; }
+      b.disabled = true;
+      try { await deleteDoc(doc(colApostilas(), snap.id)); docs = docs.filter(d=>d!==snap); b.closest('.mi-linha').remove(); aviso('Apostila excluída.'); }
+      catch(_){ b.disabled = false; aviso('Não consegui excluir. Confira a internet.'); }
+      return;
+    }
+    b.disabled = true; b.textContent = 'Abrindo…';
+    try { descarregarNuvem(); mostrarApostila(await apostilaDoDoc(snap)); fecharModal(); marcarNuvem('ok'); aviso('Apostila aberta.'); }
+    catch(_){ b.disabled = false; b.textContent = 'Abrir'; aviso('Não consegui abrir essa apostila. Confira a internet.'); }
+  };
+}
+$('#b-minhas').onclick = abrirMinhas;
 
 /* --- Painel admin (cadastrar clientes, dar créditos, bloquear) --- */
 function abrirAdm(){
@@ -1730,10 +1933,11 @@ $('#b-instalar').onclick = async ()=>{
 };
 
 /* ---------- Início ---------- */
+let prontoOk; const PRONTO = new Promise(r => prontoOk = r);
 (async ()=>{
   if (DEMO){ const m = MODELOS.find(x=>x.id===DEMO); if (m){ st = m.fn(); if (!new URLSearchParams(location.search).has('capa')) st.capa.mostrarCapa = false; } document.body.classList.add('demo'); document.documentElement.style.overflow = 'hidden'; document.body.dataset.vista = 'ver'; $('#zoom').classList.add('exportando'); }
   else await carregarSalvo();
-  renderCapa(); renderEditor(); aba('cont');
+  renderCapa(); renderEditor(); aba('cont'); prontoOk();
   document.fonts && document.fonts.ready.then(ajustarZoom);
 })();
 if (DEMO){ /* só mostra a página */ }
