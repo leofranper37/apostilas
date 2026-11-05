@@ -9,6 +9,16 @@ Também abre em https://leofranper37.github.io/apostilas/ (app em /apostilas/app
 - O modo **Automático** gasta 1 crédito por apostila, seção ou ilustração.
 - O administrador (usuário `admin`) não gasta créditos.
 
+## Gerador de apostilas (botão "Criar com IA")
+1. Escolha o **tipo** (escolar, qualquer assunto, educação infantil, estudo bíblico, música e cifras), o **tema**, a **quantidade de páginas**, o **idioma** e o **estilo de ilustração**.
+2. Clique em **Gerar sugestões de páginas** (a IA monta o plano) ou **Definir manualmente**.
+3. No **Planejamento**, mude títulos, escreva instruções para cada página, mude a ordem ou adicione páginas.
+4. Gere **uma página por vez** (cada uma tem "Gerar novamente") ou todas de uma vez. Cada página começa numa folha nova.
+**Modelo das páginas:** *Revista de estudo* (texto corrido, frase de destaque, citações recuadas, quadros "Discuta", Introdução e Conclusão sem número e Referências, como as revistas de EBD), *Revista visual* ou *Apostila didática*.
+Em **Seu material de base**, cole o seu esboço ou as suas anotações: a IA usa esse texto como fonte principal (até 5 mil letras por pedido).
+Também existe um modelo pronto "Revista de estudo (EBD)" em **Nova**.
+No semiautomático (grátis), o "de uma vez" vai de 4 em 4 páginas, para a resposta da IA não ser cortada. O plano fica salvo junto com a apostila.
+
 ## Ativar (uma vez só), no console do Firebase
 Console: https://console.firebase.google.com/project/criador-apostilas-leo
 
