@@ -6,6 +6,7 @@
 <title>Criador de Apostilas</title>
 <meta name="description" content="Crie apostilas de ensino com capa, imagens, atividades e gabarito, e baixe em PDF.">
 <meta name="theme-color" content="#2747d6">
+<script>try{var tm=localStorage.getItem("apostilas-tema");if(tm)document.documentElement.dataset.theme=tm}catch(e){}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -139,8 +140,6 @@ h3.sec:first-child{margin-top:0}
 .gaveta [data-gv]:not(.btn)[hidden]{display:none}
 .gaveta [data-gv]:not(.btn) > span{width:22px;text-align:center;opacity:.9}
 .gaveta [data-gv]:not(.btn):hover,.gaveta [data-gv]:not(.btn):focus-visible{background:#1d2a40}
-.gaveta [data-gv="criar"]{background:#2747d6;color:#fff}
-.gaveta [data-gv="criar"]:hover{background:#3354e6}
 .gv-pe{margin-top:auto;padding-top:14px;display:grid;gap:4px}
 .gv-pe .btn{width:100%;justify-content:center;padding:11px}
 .gv-user{display:flex;align-items:center;gap:10px;padding:10px 8px 0;border-top:1px solid #26344a;margin-top:6px}
@@ -322,6 +321,218 @@ body.demo .zoom .ap-folha{box-shadow:none}
   .acoes{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
   .marca{font-size:18px}
 }
+
+/* ================= Estúdio: menu lateral fixo + páginas ================= */
+:root{--lat:268px;--papel:#f6f4ef}
+body{display:block;background:var(--bg)}
+:root:not([data-theme="dark"]) body{--bg:#f4f2ec;--line:#e2ddd2}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) body{--bg:#0e131b;--line:#2a3443}}
+.ico{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.area{height:100vh;height:100dvh;display:flex;flex-direction:column;min-width:0}
+.pagina{flex:1;overflow:auto;padding:28px 32px 70px}
+.pagina[hidden],.pg-editor[hidden]{display:none}
+.pg-editor{flex:1;min-height:0;display:flex;flex-direction:column}
+.pg-editor .principal{flex:1;min-height:0}
+
+/* barra do topo */
+.topo{min-height:66px;padding:10px 24px;gap:14px;flex-wrap:nowrap;position:relative;z-index:5}
+.pg-cab{margin-right:auto;min-width:0}
+.pg-cab h1{font-family:var(--display);font-size:21px;margin:0;line-height:1.2;letter-spacing:-.01em}
+.pg-cab p{margin:1px 0 0;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
+.topo-dir{display:flex;align-items:center;gap:10px}
+.pilula-cred{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px 7px 8px;font-weight:600;font-size:14px;cursor:pointer}
+.pilula-cred:hover{border-color:var(--accent)}
+.pilula-cred[hidden],.topo-av[hidden]{display:none}
+.moeda{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#ffe27a,#f5b82e);color:#5a3d00;display:grid;place-items:center;font-size:12px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+.topo-av{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--accent);font-weight:800;cursor:pointer;font-size:14px}
+.topo-av:hover{border-color:var(--accent)}
+.barra-ed{display:flex;gap:6px;align-items:center;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
+.barra-ed .btn{display:inline-flex;align-items:center;gap:6px}
+.barra-esp{flex:1}
+
+/* menu lateral */
+.gaveta{width:var(--lat);background:linear-gradient(180deg,#101b36 0%,#0b1428 100%);color:#d4dbe8;padding:16px 14px;gap:1px;border-right:1px solid rgba(255,255,255,.04)}
+.gv-topo{margin:2px 4px 16px}
+.gv-logo{display:flex;align-items:center;gap:11px;color:inherit;text-decoration:none}
+.gv-logo i{width:30px;height:36px;border-radius:5px;background:linear-gradient(160deg,#3a5cf0,#2747d6);box-shadow:3px 3px 0 #ffd84d}
+.gv-logo i::after{left:6px;right:6px;top:11px;height:6px}
+.gv-logo > span{display:flex;flex-direction:column;white-space:nowrap}
+.gv-logo b{font-size:19px;color:#fff;line-height:1.1}
+.gv-logo small{color:#8f9bb3}
+.gv-saldo{grid-template-columns:auto 1fr auto;align-items:center;gap:10px;background:linear-gradient(135deg,#1d2e5c,#15223f);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;margin:0 0 12px}
+.gv-saldo .moeda{width:34px;height:34px;font-size:16px}
+.gv-saldo b{font-size:17px;color:#fff;display:block;line-height:1.2}
+.gv-saldo .btn{margin:0;align-self:center;padding:4px 9px;font-size:12.5px}
+.gv-saldo{gap:8px;padding:12px 10px}
+.gv-rot{font-size:10px;white-space:nowrap;letter-spacing:.05em}
+.gv-sec{margin:14px 10px 6px;font-size:10.5px;color:#6f7c95}
+.gv-sec[hidden]{display:none}
+.gaveta [data-gv]:not(.btn){position:relative;gap:12px;padding:9px 12px;font-size:14.5px;font-weight:500;border-radius:10px;color:#c9d2e2}
+.gaveta [data-gv]:not(.btn):hover,.gaveta [data-gv]:not(.btn):focus-visible{background:rgba(255,255,255,.06);color:#fff}
+.gaveta [data-gv][aria-current="page"]{background:rgba(255,216,77,.11);color:#fff}
+.gaveta [data-gv][aria-current="page"]::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:#ffd84d}
+.gaveta [data-gv][aria-current="page"] .ico{color:#ffd84d}
+.gaveta [data-gv="criar"]:not(.btn){background:linear-gradient(135deg,#2f52e6,#5a3fd8);color:#fff;font-weight:600;margin:2px 0 4px;box-shadow:0 6px 18px rgba(47,82,230,.35)}
+.gaveta [data-gv="criar"]:not(.btn):hover,.gaveta [data-gv="criar"]:not(.btn):focus-visible{background:linear-gradient(135deg,#3a5cf0,#6a4fe6)}
+.gaveta [data-gv="logo"]{padding:0;background:none!important}
+.gaveta [data-gv="logo"]::before{display:none}
+.gaveta [data-gv]:not(.btn) > .gv-novo{width:auto}
+.gv-novo{margin-left:auto;background:#ffd84d;color:#3d2c00;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:999px}
+.gv-novo[hidden]{display:none}
+.gv-pe{gap:6px}
+.gv-pe .btn.pri{background:#ffd84d;border-color:#ffd84d;color:#1f1a05;font-weight:700;border-radius:11px}
+.gv-pe .btn.pri:hover{background:#ffe27a}
+.gv-tema{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;font-size:13px;color:#8f9bb3}
+.gv-tema div{display:flex;background:rgba(255,255,255,.06);border-radius:10px;padding:3px;gap:2px}
+.gv-tema button{border:0;background:none;color:#aab4c8;width:34px;height:28px;border-radius:8px;cursor:pointer;display:grid;place-items:center}
+.gv-tema button[aria-pressed="true"]{background:#2f52e6;color:#fff}
+.gv-tema .ico{width:16px;height:16px}
+.gv-user{border-top-color:rgba(255,255,255,.08)}
+.gv-user .av{background:linear-gradient(135deg,#2f52e6,#5a3fd8);color:#fff;border-radius:10px}
+@media (min-width:1100px){
+  body:not(.demo){padding-left:var(--lat)}
+  .gaveta{transform:none!important;box-shadow:none;max-width:none}
+  .gaveta-fundo,#gv-fechar,.b-menu{display:none!important}
+}
+
+/* elementos comuns das páginas */
+.pg-larga{max-width:1180px;margin:0 auto}
+.pg-cabeca{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.pg-cabeca h2{font-family:var(--display);font-size:30px;margin:2px 0 4px;letter-spacing:-.015em}
+.pg-cabeca p{margin:0;color:var(--muted);max-width:620px;line-height:1.5}
+.sobre{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.pg-cab-acoes{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pg-cab-acoes input{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 12px;min-width:220px}
+.cx{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}
+.cx h3{font-family:var(--display);font-size:19px;margin:0 0 4px}
+.cx > p.sub,.cx-sub{color:var(--muted);font-size:14px;margin:0 0 16px;line-height:1.45}
+.marca-texto{background:linear-gradient(transparent 58%,rgba(255,216,77,.85) 58%);padding:0 .08em}
+:root[data-theme="dark"] .marca-texto{background:linear-gradient(transparent 62%,rgba(255,216,77,.45) 62%)}
+
+/* Início */
+.heroi{position:relative;overflow:hidden;border-radius:24px;padding:38px 40px;background:radial-gradient(120% 140% at 100% 0%,rgba(255,216,77,.28) 0%,transparent 45%),radial-gradient(90% 120% at 0% 100%,rgba(90,63,216,.14) 0%,transparent 55%),var(--panel);border:1px solid var(--line);display:grid;grid-template-columns:1.25fr .75fr;gap:28px;align-items:center}
+.heroi h2{font-family:var(--display);font-size:40px;line-height:1.08;margin:6px 0 10px;letter-spacing:-.02em;text-wrap:balance}
+.heroi > div > p{color:var(--muted);margin:0 0 20px;font-size:16px;line-height:1.5;max-width:560px}
+.pedido{display:flex;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:7px;box-shadow:0 10px 30px rgba(20,30,60,.08)}
+.pedido:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(39,71,214,.15)}
+.pedido input{flex:1;min-width:0;border:0;background:none;padding:10px 12px;font-size:16px;outline:0}
+.pedido .btn{border-radius:11px;padding:10px 16px;font-size:15px}
+.sugestoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.sugestoes button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
+.sugestoes button:hover{color:var(--ink);border-color:var(--accent)}
+.heroi-folhas{position:relative;height:260px}
+.heroi-folhas .mini-caixa{position:absolute;box-shadow:0 18px 40px rgba(15,25,50,.22);border-radius:6px}
+.heroi-folhas .mini-caixa:nth-child(1){right:120px;top:34px;transform:rotate(-7deg)}
+.heroi-folhas .mini-caixa:nth-child(2){right:10px;top:0;transform:rotate(5deg)}
+.atalhos{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}
+.atalho{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:18px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:transform .15s,box-shadow .15s,border-color .15s;color:inherit}
+.atalho:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(20,30,60,.1);border-color:var(--cor,var(--accent))}
+.atalho .ico-cx{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--cor) 14%,transparent);color:var(--cor);margin-bottom:6px}
+.atalho .ico{width:22px;height:22px}
+.atalho b{font-size:16px}
+.atalho small{color:var(--muted);font-size:13px;line-height:1.4}
+.inicio-grade{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+.continuar{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.continuar h4{font-size:19px;margin:4px 0;font-family:var(--display)}
+.continuar small{color:var(--muted)}
+.continuar .pl-acoes{margin-top:14px}
+.passos3{list-style:none;margin:0;padding:0;display:grid;gap:14px;counter-reset:p}
+.passos3 li{display:grid;grid-template-columns:36px 1fr;gap:12px;counter-increment:p}
+.passos3 li::before{content:counter(p);width:34px;height:34px;border-radius:11px;background:var(--soft);color:var(--accent);font-weight:800;display:grid;place-items:center}
+.passos3 b{display:block}
+.passos3 span{color:var(--muted);font-size:14px;line-height:1.4}
+.faixa-cred{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;padding:14px 18px;border-radius:16px;background:linear-gradient(135deg,#15224a,#2a2470);color:#e9edff}
+.faixa-cred b{color:#fff}
+.faixa-cred .moeda{width:34px;height:34px;font-size:16px;flex:none}
+.faixa-cred > span:not(.moeda){flex:1;min-width:200px}
+
+/* miniatura de capa */
+.mini-caixa{overflow:hidden;background:#fff;border-radius:6px;flex:none;position:relative}
+.mini-caixa > div{width:794px;transform-origin:top left;pointer-events:none}
+.mini-caixa .ap-folha{margin:0!important;box-shadow:none!important}
+
+/* Minhas apostilas */
+.grade-pj{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+.pj{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s,transform .15s}
+.pj:hover{box-shadow:0 14px 30px rgba(20,30,60,.1);transform:translateY(-2px)}
+.pj-capa{background:var(--bg);padding:18px 18px 0;display:flex;justify-content:center;position:relative;height:200px;overflow:hidden;border-bottom:1px solid var(--line)}
+.pj-capa .mini-caixa{box-shadow:0 8px 22px rgba(15,25,50,.18)}
+.pj-tag{position:absolute;top:10px;right:10px;background:#ffd84d;color:#3d2c00;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+.pj-info{padding:14px 16px 4px;flex:1}
+.pj-info h3{font-size:16px;margin:6px 0 2px;line-height:1.3}
+.pj-info small{color:var(--muted);font-size:12.5px}
+.pj-chips{display:flex;gap:5px;flex-wrap:wrap;min-height:22px}
+.pj-chips span{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--accent)}
+.pj-chips span + span{background:var(--bg);color:var(--muted)}
+.pj-acoes{display:flex;gap:6px;padding:12px 16px 16px;justify-content:flex-end}
+.pj-acoes .btn.pri{flex:1}
+.vazio-pg{border:2px dashed var(--line);border-radius:18px;padding:40px 20px;text-align:center;color:var(--muted);grid-column:1/-1}
+.vazio-pg b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+
+/* Atividades */
+.duas{display:grid;grid-template-columns:minmax(340px,460px) 1fr;gap:18px;align-items:start}
+.marcas{display:grid;grid-template-columns:1fr 1fr;gap:6px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);margin-bottom:12px}
+.marcas label{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.destino{display:grid;gap:6px;margin-bottom:12px}
+.destino label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--bg);font-size:14px}
+.destino label:has(input:checked){border-color:var(--accent);background:var(--soft)}
+.destino small{display:block;color:var(--muted);font-size:12.5px}
+.lado-info{position:sticky;top:0}
+.exemplo-q{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--bg);display:grid;gap:10px;font-size:14px}
+.exemplo-q .q{background:var(--panel);border-radius:10px;padding:12px 14px;border:1px solid var(--line)}
+.exemplo-q .q b{display:block;margin-bottom:6px}
+.exemplo-q .q span{display:block;color:var(--muted)}
+.tipo-tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#d9622b;margin-bottom:4px}
+.botoes-col{display:grid;gap:8px;margin-top:6px}
+.botoes-col .btn{justify-content:center;display:flex;align-items:center;gap:8px}
+
+/* Capas e imagens */
+.capas-grade{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start}
+.capas-prev{display:flex;gap:16px;flex-wrap:wrap}
+.capas-prev figure{margin:0;text-align:center}
+.capas-prev figcaption{font-size:13px;color:var(--muted);margin-top:8px;font-weight:600}
+.capas-prev .mini-caixa{box-shadow:0 12px 30px rgba(15,25,50,.16)}
+.cartoes-acao{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Aprender e Novidades */
+.video-cx{border-radius:18px;overflow:hidden;background:#000;aspect-ratio:16/9;border:1px solid var(--line)}
+.video-cx video{width:100%;height:100%;display:block;object-fit:contain}
+.aulas{display:grid;gap:10px}
+.aulas details{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:0 18px}
+.aulas summary{cursor:pointer;padding:16px 0;font-weight:700;display:flex;align-items:center;gap:12px;list-style:none}
+.aulas summary::-webkit-details-marker{display:none}
+.aulas summary::after{content:"+";margin-left:auto;font-size:20px;color:var(--muted)}
+.aulas details[open] summary::after{content:"–"}
+.aulas .n{width:30px;height:30px;border-radius:10px;background:var(--soft);color:var(--accent);display:grid;place-items:center;font-size:13px;flex:none}
+.aulas ol,.aulas p{margin:0 0 16px;color:var(--muted);line-height:1.55;font-size:14.5px}
+.aulas ol{padding-left:20px}
+.linha-tempo{list-style:none;margin:0;padding:0 0 0 22px;border-left:2px solid var(--line);display:grid;gap:18px;max-width:760px}
+.linha-tempo > li{position:relative}
+.linha-tempo > li::before{content:"";position:absolute;left:-30px;top:20px;width:14px;height:14px;border-radius:50%;background:var(--panel);border:3px solid var(--accent)}
+.linha-tempo > li:first-child::before{background:#ffd84d;border-color:#ffd84d;box-shadow:0 0 0 4px rgba(255,216,77,.3)}
+.linha-tempo time{font-size:12.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+.linha-tempo h3{margin:4px 0 8px}
+.linha-tempo ul{margin:0;padding-left:18px;color:var(--muted);line-height:1.6;font-size:14.5px}
+
+@media (max-width:1240px){.atalhos{grid-template-columns:repeat(2,1fr)}.heroi{grid-template-columns:1fr}.heroi-folhas{display:none}}
+@media (max-width:980px){.inicio-grade,.duas,.capas-grade{grid-template-columns:1fr}.lado-info{position:static}}
+@media (max-width:640px){
+  .pagina{padding:18px 14px 60px}
+  .heroi{padding:24px 20px;border-radius:18px}
+  .heroi h2{font-size:30px}
+  .pedido{flex-direction:column}
+  .atalhos{grid-template-columns:1fr 1fr;gap:10px}
+  .atalho{padding:14px}
+  .continuar{grid-template-columns:1fr}
+  .cartoes-acao,.marcas{grid-template-columns:1fr}
+  .topo{padding:8px 12px}
+  .pg-cab h1{font-size:18px}
+  .pg-cab p{max-width:46vw}
+  .pilula-cred{padding:6px 10px 6px 6px;font-size:13px}
+  .pilula-cred .so-grande{display:none}
+}
+body.demo .gaveta,body.demo .barra-ed,body.demo .pagina{display:none!important}
+body.demo .area{height:auto}
 </style>
 
 <style id="apcss">
@@ -507,24 +718,85 @@ body.demo .zoom .ap-folha{box-shadow:none}
 </head>
 <body data-vista="editar">
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-casa" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v10.5h4.5v-6h4v6h4.5V9"/></symbol>
+  <symbol id="i-faisca" viewBox="0 0 24 24"><path d="M10 3.5 11.6 8a3 3 0 0 0 1.9 1.9L18 11.5l-4.5 1.6a3 3 0 0 0-1.9 1.9L10 19.5 8.4 15a3 3 0 0 0-1.9-1.9L2 11.5l4.5-1.6A3 3 0 0 0 8.4 8z"/><path d="M18.5 3v4M16.5 5h4M19 16v3M17.5 17.5h3"/></symbol>
+  <symbol id="i-lapis" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="m8 9 1.5 1.5L12 8M8 15l1.5 1.5L12 14M14.5 9.5H17M14.5 15.5H17"/></symbol>
+  <symbol id="i-imagem" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 17 5-4.5 3.5 3 3-2.5 4.5 4"/></symbol>
+  <symbol id="i-grade" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+  <symbol id="i-pasta" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m10 8.8 5 3.2-5 3.2z"/></symbol>
+  <symbol id="i-sino" viewBox="0 0 24 24"><path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></symbol>
+  <symbol id="i-carrinho" viewBox="0 0 24 24"><path d="M3.5 4.5h2.2l2 11h10l1.8-7.5H6.7"/><circle cx="9" cy="19" r="1.3"/><circle cx="16.5" cy="19" r="1.3"/></symbol>
+  <symbol id="i-pessoa" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
+  <symbol id="i-engrenagem" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6"/></symbol>
+  <symbol id="i-baixar" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 6.5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9.5L5.5 20v-3.5H6a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-sol" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="i-lua" viewBox="0 0 24 24"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></symbol>
+  <symbol id="i-livro" viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15.5H5.5A1.5 1.5 0 0 1 4 18z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15.5h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></symbol>
+  <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4M9 13.5h6M9 16.5h4"/></symbol>
+</svg>
+
+<div class="gaveta-fundo" id="gaveta-fundo" hidden></div>
+<nav class="gaveta" id="gaveta" aria-label="Menu principal" hidden>
+  <div class="gv-topo"><a class="gv-logo" href="#/inicio" data-gv="logo"><i aria-hidden="true"></i><span><b>Criador</b><small>de Apostilas</small></span></a><button class="ic" id="gv-fechar" aria-label="Fechar menu">✕</button></div>
+  <div class="gv-saldo" id="gv-saldo" hidden><span class="moeda" aria-hidden="true">✦</span><span><span class="gv-rot">Saldo disponível</span><b id="gv-creditos">0 créditos</b></span><button class="btn peq ia" data-comprar>Comprar</button></div>
+  <button data-gv="criar"><svg class="ico" aria-hidden="true"><use href="#i-faisca"/></svg>Criar apostila com IA</button>
+  <small class="gv-sec">Estúdio</small>
+  <button data-gv="inicio" data-pg="inicio"><svg class="ico" aria-hidden="true"><use href="#i-casa"/></svg>Início</button>
+  <button data-gv="editor" data-pg="editor"><svg class="ico" aria-hidden="true"><use href="#i-lapis"/></svg>Editar apostila</button>
+  <button data-gv="atividades" data-pg="atividades"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Atividades e provas</button>
+  <button data-gv="capas" data-pg="capas"><svg class="ico" aria-hidden="true"><use href="#i-imagem"/></svg>Capas e imagens</button>
+  <button data-gv="modelos"><svg class="ico" aria-hidden="true"><use href="#i-grade"/></svg>Modelos prontos</button>
+  <small class="gv-sec">Biblioteca</small>
+  <button data-gv="projetos" data-pg="projetos"><svg class="ico" aria-hidden="true"><use href="#i-pasta"/></svg>Minhas apostilas</button>
+  <button data-gv="aprender" data-pg="aprender"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>Aprenda a usar</button>
+  <button data-gv="novidades" data-pg="novidades"><svg class="ico" aria-hidden="true"><use href="#i-sino"/></svg>Novidades<span class="gv-novo" id="gv-novo" hidden>novo</span></button>
+  <small class="gv-sec" data-so-conta>Conta</small>
+  <button data-gv="comprar" data-so-auto><svg class="ico" aria-hidden="true"><use href="#i-carrinho"/></svg>Comprar créditos</button>
+  <button data-gv="conta" data-so-conta><svg class="ico" aria-hidden="true"><use href="#i-pessoa"/></svg>Minha conta</button>
+  <button data-gv="admin" data-so-admin><svg class="ico" aria-hidden="true"><use href="#i-engrenagem"/></svg>Painel admin</button>
+  <button data-gv="instalar" id="gv-instalar" hidden><svg class="ico" aria-hidden="true"><use href="#i-baixar"/></svg>Instalar app</button>
+  <div class="gv-pe">
+    <button class="btn pri" data-gv="nova">＋ Nova apostila</button>
+    <a data-gv="suporte" id="gv-suporte" target="_blank" rel="noopener"><svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>Suporte</a>
+    <div class="gv-tema"><span id="gv-tema-rot">Tema</span><div role="group" aria-labelledby="gv-tema-rot"><button data-tema="light" aria-label="Tema claro" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-sol"/></svg></button><button data-tema="dark" aria-label="Tema escuro" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-lua"/></svg></button></div></div>
+    <div class="gv-user" id="gv-user"></div>
+  </div>
+</nav>
+
+<div class="area">
 <header class="topo">
   <button class="b-menu" id="b-menu" aria-label="Abrir menu" aria-expanded="false" aria-controls="gaveta"><span></span><span></span><span></span></button>
-  <div class="marca"><i aria-hidden="true"></i>Criador de Apostilas <span class="nuvem" id="nuvem" role="status" hidden></span></div>
-  <div class="acoes">
-    <button class="btn ia" id="b-ia">✦ Criar com IA</button>
-    <button class="btn" id="b-instalar" hidden>⤓ Instalar app</button>
-    <button class="btn" id="b-painel" hidden>Painel admin</button>
-    <button class="btn" id="b-conta" hidden></button>
-    <button class="btn" id="b-minhas" hidden>Minhas apostilas</button>
-    <button class="btn" id="b-nova">Nova</button>
-    <button class="btn" id="b-abrir">Abrir projeto</button>
-    <button class="btn" id="b-salvar">Salvar projeto</button>
-    <button class="btn" id="b-html">Baixar HTML</button>
-    <button class="btn pri" id="b-pdf">Baixar PDF</button>
+  <div class="pg-cab"><h1 id="pg-tit">Início</h1><p id="pg-sub">Seu estúdio de apostilas</p></div>
+  <span class="nuvem" id="nuvem" role="status" hidden></span>
+  <div class="topo-dir">
+    <button class="pilula-cred" id="topo-cred" data-comprar hidden><span class="moeda" aria-hidden="true">✦</span><span id="topo-cred-n">0 créditos</span></button>
+    <button class="topo-av" id="topo-av" hidden aria-label="Minha conta"></button>
   </div>
-  <input type="file" id="f-abrir" accept=".json,application/json" hidden>
 </header>
 
+<div class="pagina" id="pg-inicio" data-pag="inicio"></div>
+<div class="pagina" id="pg-projetos" data-pag="projetos" hidden></div>
+<div class="pagina" id="pg-atividades" data-pag="atividades" hidden></div>
+<div class="pagina" id="pg-capas" data-pag="capas" hidden></div>
+<div class="pagina" id="pg-aprender" data-pag="aprender" hidden></div>
+<div class="pagina" id="pg-novidades" data-pag="novidades" hidden></div>
+
+<div class="pg-editor" id="pg-editor" data-pag="editor" hidden>
+<div class="barra-ed" role="toolbar" aria-label="Ações da apostila">
+  <button class="btn ia" id="b-ia">✦ Criar com IA</button>
+  <button class="btn" id="b-nova">Nova</button>
+  <button class="btn" id="b-abrir">Abrir projeto</button>
+  <button class="btn" id="b-salvar">Salvar projeto</button>
+  <span class="barra-esp"></span>
+  <button class="btn" id="b-html">Baixar HTML</button>
+  <button class="btn pri" id="b-pdf">Baixar PDF</button>
+  <span hidden><button id="b-instalar" hidden>Instalar app</button><button id="b-painel" hidden>Painel admin</button><button id="b-conta" hidden></button><button id="b-minhas" hidden>Minhas apostilas</button></span>
+  <input type="file" id="f-abrir" accept=".json,application/json" hidden>
+</div>
 <main class="principal">
   <section class="editor" aria-label="Edição">
     <div class="abas" role="tablist">
@@ -587,27 +859,8 @@ body.demo .zoom .ap-folha{box-shadow:none}
   <button role="tab" id="m-ver" aria-selected="false">Ver apostila</button>
 </nav>
 
-<div class="gaveta-fundo" id="gaveta-fundo" hidden></div>
-<nav class="gaveta" id="gaveta" aria-label="Menu" hidden>
-  <div class="gv-topo"><span class="gv-logo"><i aria-hidden="true"></i><span><b>Criador</b><small>de Apostilas</small></span></span><button class="ic" id="gv-fechar" aria-label="Fechar menu">✕</button></div>
-  <div class="gv-saldo" id="gv-saldo" hidden><span class="gv-rot">Saldo disponível</span><b id="gv-creditos">0 créditos</b><button class="btn peq ia" data-comprar>Comprar créditos</button></div>
-  <small class="gv-sec">Criar</small>
-  <button data-gv="criar"><span aria-hidden="true">✦</span>Criar apostila com IA</button>
-  <button data-gv="modelos"><span aria-hidden="true">▦</span>Modelos prontos</button>
-  <button data-gv="imagens"><span aria-hidden="true">🖼</span>Capa, contracapa e imagens</button>
-  <button data-gv="secao"><span aria-hidden="true">＋</span>Seção com IA</button>
-  <small class="gv-sec">Minha área</small>
-  <button data-gv="minhas" data-so-conta><span aria-hidden="true">📁</span>Minhas apostilas</button>
-  <button data-gv="comprar" data-so-auto><span aria-hidden="true">🛒</span>Comprar créditos</button>
-  <button data-gv="conta" data-so-conta><span aria-hidden="true">👤</span>Minha conta</button>
-  <button data-gv="admin" data-so-admin><span aria-hidden="true">⚙</span>Painel admin</button>
-  <button data-gv="instalar" id="gv-instalar" hidden><span aria-hidden="true">⤓</span>Instalar app</button>
-  <div class="gv-pe">
-    <button class="btn pri" data-gv="nova">＋ Nova apostila</button>
-    <a class="gv-link" data-gv="suporte" id="gv-suporte" target="_blank" rel="noopener"><span aria-hidden="true">💬</span>Suporte</a>
-    <div class="gv-user" id="gv-user"></div>
-  </div>
-</nav>
+</div>
+</div>
 <div class="modal-fundo" id="modal" hidden><div class="modal" role="dialog" aria-modal="true" id="modal-caixa"></div></div>
 <div class="aviso" id="aviso" role="status" hidden></div>
 <div class="soltar" id="soltar" hidden>Solte a imagem para adicioná-la à apostila</div>
@@ -1092,6 +1345,7 @@ function preview(){
     $('#zoom').innerHTML = d.capa + d.corpo + d.contra;
     $('#info-cont').textContent = `${d.secoes} ${d.secoes===1?'seção':'seções'} · ${d.perguntas} ${d.perguntas===1?'questão':'questões'}`;
     ajustarZoom();
+    if (pagAtual==='editor') $('#pg-sub').textContent = st.capa.titulo || 'Sem título';
   }, 120);
 }
 function ajustarZoom(){
@@ -1289,12 +1543,12 @@ function aba(qual){
   $('.add-fim').style.display = qual==='cont' ? '' : 'none';
 }
 $('#t-cont').onclick = ()=>aba('cont'); $('#t-capa').onclick = ()=>aba('capa');
-function vista(v){ document.body.dataset.vista = v; $('#m-editar').setAttribute('aria-selected', v==='editar'); $('#m-ver').setAttribute('aria-selected', v==='ver'); if(v==='ver') setTimeout(ajustarZoom,0); }
+function vista(v){ if (typeof irPara==='function' && pagAtual!=='editor' && !DEMO) irPara('editor'); document.body.dataset.vista = v; $('#m-editar').setAttribute('aria-selected', v==='editar'); $('#m-ver').setAttribute('aria-selected', v==='ver'); if(v==='ver') setTimeout(ajustarZoom,0); }
 $('#m-editar').onclick = ()=>vista('editar'); $('#m-ver').onclick = ()=>vista('ver');
 
 /* ---------- Modal e avisos ---------- */
 function modal(html, larga){ $('#modal-caixa').classList.toggle('larga', !!larga); $('#modal-caixa').innerHTML = html; $('#modal').hidden = false; const f = $('#modal-caixa').querySelector('input,textarea,select,button'); if (f) f.focus(); }
-function fecharModal(){ $('#modal').hidden = true; }
+function fecharModal(){ const ab = !$('#modal').hidden; $('#modal').hidden = true; if (ab) atualizarPagina(); }
 $('#modal').addEventListener('click', e=>{ if (e.target.id==='modal' || e.target.dataset.fechar!==undefined) fecharModal(); });
 document.addEventListener('keydown', e=>{ if (e.key==='Escape' && !$('#modal').hidden) fecharModal(); });
 let tAviso;
@@ -2305,7 +2559,10 @@ function abrirComprar(){
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-comprar]')){ e.preventDefault(); fecharGaveta(); abrirComprar(); } });
 
-/* ---------- Menu lateral (abre no ☰ e se esconde) ---------- */
+/* ---------- Menu lateral: fixo no computador, gaveta no celular ---------- */
+const mqFixo = matchMedia('(min-width:1100px)');
+const ic = n => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const txtCreditos = cr => cr===Infinity ? 'Ilimitado' : `${cr} ${cr===1?'crédito':'créditos'}`;
 function renderGaveta(){
   const conta = VENDA.on && !!VENDA.user, auto = AUTO() && conta;
   document.querySelectorAll('#gaveta [data-so-conta]').forEach(b => b.hidden = !conta);
@@ -2313,26 +2570,378 @@ function renderGaveta(){
   document.querySelectorAll('#gaveta [data-so-auto]').forEach(b => b.hidden = !auto || VENDA.admin);
   $('#gv-saldo').hidden = !auto;
   const cr = creditosIA();
-  $('#gv-creditos').textContent = cr===Infinity ? 'Ilimitado' : `${cr} ${cr===1?'crédito':'créditos'}`;
+  $('#gv-creditos').textContent = txtCreditos(cr);
   $('#gv-saldo .btn').hidden = VENDA.admin;
+  $('#topo-cred').hidden = !auto; $('#topo-cred-n').textContent = txtCreditos(cr);
   $('#gv-instalar').hidden = $('#b-instalar').hidden;
   const sup = CFG.contato || linkZap('Olá! Preciso de ajuda com o Criador de Apostilas.');
   $('#gv-suporte').href = sup; $('#gv-suporte').hidden = !sup || sup==='#';
-  $('#gv-user').innerHTML = conta ? `<span class="av" aria-hidden="true">${esc((VENDA.cliente?.nome || usuarioDe(VENDA.user.email) || '?').trim()[0].toUpperCase())}</span><span><b>${esc(VENDA.cliente?.nome || usuarioDe(VENDA.user.email))}</b><small>${VENDA.admin ? 'Administrador' : 'Usuário ativo'}</small></span>` : '';
+  const nome = conta ? (VENDA.cliente?.nome || usuarioDe(VENDA.user.email) || '?').trim() : '';
+  $('#gv-user').innerHTML = conta ? `<span class="av" aria-hidden="true">${esc(nome[0].toUpperCase())}</span><span><b>${esc(nome)}</b><small>${VENDA.admin ? 'Administrador' : 'Usuário ativo'}</small></span>` : '';
+  $('#topo-av').hidden = !conta; $('#topo-av').textContent = conta ? nome.split(/\s+/).slice(0,2).map(p=>p[0]).join('').toUpperCase() : '';
+  $('#gv-novo').hidden = lerLocal('apostilas-novidades') === NOVIDADES[0].id;
 }
-function abrirGaveta(){ renderGaveta(); $('#gaveta').hidden = $('#gaveta-fundo').hidden = false; requestAnimationFrame(()=>document.body.classList.add('gaveta-aberta')); $('#b-menu').setAttribute('aria-expanded','true'); $('#gaveta [data-gv]:not([hidden])').focus(); }
-function fecharGaveta(){ if ($('#gaveta').hidden) return; document.body.classList.remove('gaveta-aberta'); $('#b-menu').setAttribute('aria-expanded','false'); setTimeout(()=>{ $('#gaveta').hidden = $('#gaveta-fundo').hidden = true; }, 180); }
+const lerLocal = k => { try { return localStorage.getItem(k); } catch(_){ return null; } };
+const gravarLocal = (k, v) => { try { localStorage.setItem(k, v); } catch(_){} };
+function ajustarGaveta(){
+  if (DEMO) return;
+  if (mqFixo.matches){ document.body.classList.remove('gaveta-aberta'); $('#gaveta').hidden = false; $('#gaveta-fundo').hidden = true; }
+  else if (!document.body.classList.contains('gaveta-aberta')){ $('#gaveta').hidden = true; $('#gaveta-fundo').hidden = true; }
+}
+mqFixo.addEventListener('change', ajustarGaveta);
+function abrirGaveta(){ renderGaveta(); if (mqFixo.matches) return; $('#gaveta').hidden = $('#gaveta-fundo').hidden = false; requestAnimationFrame(()=>document.body.classList.add('gaveta-aberta')); $('#b-menu').setAttribute('aria-expanded','true'); $('#gaveta [data-gv]:not([hidden])').focus(); }
+function fecharGaveta(){ if (mqFixo.matches || $('#gaveta').hidden) return; document.body.classList.remove('gaveta-aberta'); $('#b-menu').setAttribute('aria-expanded','false'); setTimeout(()=>{ if (!document.body.classList.contains('gaveta-aberta')) $('#gaveta').hidden = $('#gaveta-fundo').hidden = true; }, 180); }
 $('#b-menu').onclick = abrirGaveta;
 $('#gv-fechar').onclick = fecharGaveta;
 $('#gaveta-fundo').onclick = fecharGaveta;
-document.addEventListener('keydown', e => { if (e.key==='Escape' && !$('#gaveta').hidden) fecharGaveta(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape' && $('#modal').hidden) fecharGaveta(); });
+const novaComIA = tema => { fAp = tema ? {...(fAp || st.plano || {tipo:'escolar', n:8, idioma:IDIOMAS[0], ex:'mistas', est:'aquarela', nivel:'intermediario', escrita:'acolhedor', sugerir:true}), tema} : null; formGerador.etapa = 1; formGerador(); };
+const ACOES = {
+  logo:()=>irPara('inicio'), inicio:()=>irPara('inicio'), editor:()=>irPara('editor'), atividades:()=>irPara('atividades'), capas:()=>irPara('capas'),
+  projetos:()=>irPara('projetos'), aprender:()=>irPara('aprender'), novidades:()=>irPara('novidades'),
+  criar:()=>abrirGerador(), nova:()=>novaComIA(), modelos:()=>$('#b-nova').click(), imagens:()=>abrirIlustracoes(), secao:()=>{ irPara('editor'); abrirIA('secao'); },
+  comprar:()=>abrirComprar(), conta:()=>$('#b-conta').click(), admin:()=>$('#b-painel').click(), instalar:()=>$('#b-instalar').click()
+};
 $('#gaveta').addEventListener('click', e => {
+  const t = e.target.closest('[data-tema]'); if (t){ aplicarTema(t.dataset.tema, true); return; }
   const b = e.target.closest('[data-gv]'); if (!b) return;
   const ac = b.dataset.gv; if (ac==='suporte'){ fecharGaveta(); return; }
-  fecharGaveta();
-  ({criar:()=>abrirGerador(), nova:()=>{ fAp = null; formGerador.etapa = 1; formGerador(); }, modelos:()=>$('#b-nova').click(), imagens:()=>abrirIlustracoes(),
-    secao:()=>abrirIA('secao'), minhas:()=>$('#b-minhas').click(), comprar:()=>abrirComprar(), conta:()=>$('#b-conta').click(), admin:()=>$('#b-painel').click(), instalar:()=>$('#b-instalar').click()})[ac]?.();
+  e.preventDefault(); fecharGaveta(); ACOES[ac]?.();
 });
+$('#topo-av').onclick = ()=>$('#b-conta').click();
+// atalhos das páginas usam o mesmo mapa: <button data-ir="atividades">
+document.addEventListener('click', e => { const b = e.target.closest('[data-ir]'); if (b && !b.closest('#gaveta')){ e.preventDefault(); ACOES[b.dataset.ir]?.(); } });
+
+/* ---------- Tema claro / escuro ---------- */
+function temaAtual(){ return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+function aplicarTema(t, gravar){
+  if (t) document.documentElement.dataset.theme = t;
+  if (gravar) gravarLocal('apostilas-tema', t);
+  const at = temaAtual();
+  document.querySelectorAll('[data-tema]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tema===at));
+  document.querySelector('meta[name="theme-color"]').content = at==='dark' ? '#0e131b' : '#2747d6';
+}
+
+/* ---------- Páginas ---------- */
+var pagAtual = 'inicio';
+const PAGINAS = {
+  inicio:['Início','Seu estúdio de apostilas'],
+  editor:['Editar apostila',''],
+  projetos:['Minhas apostilas','Tudo o que você criou'],
+  atividades:['Atividades e provas','Questões prontas para imprimir, com gabarito'],
+  capas:['Capas e imagens','Capa, contracapa e ilustrações da apostila aberta'],
+  aprender:['Aprenda a usar','Do tema ao PDF em poucos minutos'],
+  novidades:['Novidades','O que chegou de novo no Criador de Apostilas']
+};
+const RENDER = {inicio:renderInicio, projetos:renderProjetos, atividades:renderAtividades, capas:renderCapas, aprender:renderAprender, novidades:renderNovidades};
+function irPara(p, semHistorico){
+  if (!PAGINAS[p]) p = 'inicio';
+  pagAtual = p; document.body.dataset.pag = p;
+  document.querySelectorAll('.pagina, #pg-editor').forEach(el => el.hidden = el.dataset.pag !== p);
+  document.querySelectorAll('#gaveta [data-pg]').forEach(b => b.dataset.pg===p ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
+  $('#pg-tit').textContent = PAGINAS[p][0];
+  $('#pg-sub').textContent = p==='editor' ? (st.capa.titulo || 'Sem título') : PAGINAS[p][1];
+  document.title = (p==='inicio' ? '' : PAGINAS[p][0] + ' · ') + 'Criador de Apostilas';
+  if (!semHistorico && location.hash !== '#/' + p){ try { history.pushState(null, '', '#/' + p); } catch(_){} }
+  fecharGaveta();
+  if (p==='editor') setTimeout(ajustarZoom, 0);
+  else { RENDER[p](); $('#pg-' + p).scrollTop = 0; }
+}
+window.addEventListener('popstate', ()=>{ const p = (location.hash.match(/^#\/(\w+)/)||[])[1]; if (!DEMO) irPara(p || 'inicio', true); });
+// depois de fechar uma janela, as páginas que mostram a apostila aberta se atualizam
+function atualizarPagina(){ if (['inicio','capas'].includes(pagAtual) && !DEMO) RENDER[pagAtual](); }
+
+// miniatura de capa (a mesma da apostila, reduzida)
+function miniCapa(capa, largura){
+  const k = largura / 794, c = {...capa, mostrarCapa:true};
+  if (c.imagem && !/^data:/.test(c.imagem)) c.imagem = '';
+  let html = '';
+  try { html = renderDoc({capa:c, blocos:[]}).capa; } catch(_){}
+  return `<div class="mini-caixa" style="width:${largura}px;height:${Math.round(1010*k)}px" aria-hidden="true"><div style="transform:scale(${k})">${html}</div></div>`;
+}
+function miniContra(capa, largura){
+  const k = largura / 794;
+  let html = '';
+  try { html = renderDoc({capa:{...capa, mostrarCapa:false, contracapa:true}, blocos:[]}).contra; } catch(_){}
+  return `<div class="mini-caixa" style="width:${largura}px;height:${Math.round(1010*k)}px" aria-hidden="true"><div style="transform:scale(${k})">${html}</div></div>`;
+}
+const nomeCurto = () => { const n = VENDA.cliente?.nome || (VENDA.user ? usuarioDe(VENDA.user.email) : ''); return n ? n.trim().split(/\s+/)[0] : ''; };
+
+/* Início */
+const SUGESTOES = ['Frutos do Espírito para juniores', 'Sistema Solar para o 5º ano', 'Frações equivalentes', 'Os Dez Mandamentos', 'Revolução Industrial', 'Higiene e saúde na infância'];
+function renderInicio(){
+  const el = $('#pg-inicio'), digitado = $('#in-tema') ? $('#in-tema').value : '';
+  const hora = new Date().getHours(), oi = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite', nome = nomeCurto();
+  const auto = AUTO() && VENDA.on && VENDA.user && !VENDA.admin, cr = creditosIA();
+  const c = st.capa, nBl = st.blocos.length;
+  el.innerHTML = `<div class="pg-larga">
+  <section class="heroi">
+    <div>
+      <span class="sobre">${oi}${nome ? ', ' + esc(nome) : ''}</span>
+      <h2>O que vamos <span class="marca-texto">ensinar</span> hoje?</h2>
+      <p>Diga o tema e a IA planeja as páginas, escreve o conteúdo, monta as atividades e sugere as ilustrações. Você revisa e baixa o PDF pronto para imprimir.</p>
+      <form class="pedido" id="in-form"><input id="in-tema" type="text" placeholder="Ex.: A Criação do mundo para crianças de 6 a 8 anos" aria-label="Tema da apostila" value="${esc(digitado)}"><button class="btn ia" type="submit">✦ Criar apostila</button></form>
+      <div class="sugestoes" aria-label="Sugestões de tema">${SUGESTOES.map(s=>`<button type="button" data-sug="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+    </div>
+    <div class="heroi-folhas" aria-hidden="true">${miniCapa(capaExemplo(), 150)}${miniCapa(c, 170)}</div>
+  </section>
+  ${auto ? `<div class="faixa-cred"><span class="moeda" aria-hidden="true">✦</span><span>Você tem <b>${txtCreditos(cr)}</b>. Cada crédito gera <b>1 apostila completa</b>: todas as páginas, “gerar novamente” e a contracapa.</span><button class="btn ia" data-comprar>Comprar créditos</button></div>` : ''}
+  <div class="atalhos">
+    <button class="atalho" data-ir="criar" style="--cor:#2f52e6"><span class="ico-cx">${ic('faisca')}</span><b>Apostila com IA</b><small>Em 5 etapas: conteúdo, profundidade, base, estilo e gerar.</small></button>
+    <button class="atalho" data-ir="atividades" style="--cor:#d9622b"><span class="ico-cx">${ic('check')}</span><b>Atividades e provas</b><small>Múltipla escolha, V ou F, complete, associe e mais.</small></button>
+    <button class="atalho" data-ir="capas" style="--cor:#0e7c86"><span class="ico-cx">${ic('imagem')}</span><b>Capas e imagens</b><small>Capa, contracapa e ilustrações com prompts prontos.</small></button>
+    <button class="atalho" data-ir="modelos" style="--cor:#b7791f"><span class="ico-cx">${ic('grade')}</span><b>Modelos prontos</b><small>Comece de um modelo bonito e troque os textos.</small></button>
+  </div>
+  <div class="inicio-grade">
+    <section class="cx"><h3>Continue de onde parou</h3><p class="cx-sub">${nuvemOn() ? 'Salva na sua conta.' : 'Salva neste navegador.'}</p>
+      <div class="continuar">${miniCapa(c, 150)}<div>
+        <span class="pj-chips">${[c.disciplina, c.turma].filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}</span>
+        <h4>${esc(c.titulo || 'Sem título')}</h4><small>${nBl} ${nBl===1?'bloco':'blocos'}${st.salvoEm ? ' · editada ' + tempoRel(st.salvoEm) : ''}</small>
+        <div class="pl-acoes"><button class="btn pri" data-ir="editor">${ic('lapis')} Continuar editando</button><button class="btn" id="in-pdf">${ic('pdf')} Baixar PDF</button>${nuvemOn() ? '<button class="btn" data-ir="projetos">Ver todas</button>' : ''}</div>
+      </div></div>
+    </section>
+    <section class="cx"><h3>Como funciona</h3><p class="cx-sub">Do tema ao PDF em poucos minutos.</p>
+      <ol class="passos3">
+        <li><div><b>Conte o tema</b><span>Diga o assunto, o público e quantas páginas quer.</span></div></li>
+        <li><div><b>A IA escreve e organiza</b><span>Ela planeja as páginas e escreve cada uma. Refaça a que não gostar.</span></div></li>
+        <li><div><b>Coloque as imagens e baixe</b><span>Gere as ilustrações grátis com os prompts prontos e baixe o PDF.</span></div></li>
+      </ol>
+      <div class="pl-acoes" style="margin-top:16px"><button class="btn" data-ir="aprender">${ic('play')} Ver o passo a passo</button></div>
+    </section>
+  </div></div>`;
+  $('#in-form').onsubmit = e => { e.preventDefault(); novaComIA($('#in-tema').value.trim()); };
+  el.querySelector('.sugestoes').onclick = e => { const b = e.target.closest('[data-sug]'); if (b){ $('#in-tema').value = b.dataset.sug; $('#in-tema').focus(); } };
+  $('#in-pdf').onclick = () => { irPara('editor'); setTimeout(()=>$('#b-pdf').click(), 50); };
+}
+
+/* Minhas apostilas */
+async function renderProjetos(){
+  const el = $('#pg-projetos'), conta = nuvemOn();
+  el.innerHTML = `<div class="pg-larga">
+  <div class="pg-cabeca"><div><span class="sobre">Biblioteca</span><h2>Minhas apostilas</h2>
+    <p>${conta ? 'Ficam salvas na sua conta. Entre com o mesmo usuário em qualquer computador ou celular para continuar de onde parou.' : 'Aqui a apostila fica salva neste navegador. Use “Salvar projeto” para guardar uma cópia no computador e “Abrir arquivo” para continuar depois.'}</p></div>
+    <div class="pg-cab-acoes">${conta ? '<input type="search" id="pj-busca" placeholder="Buscar pelo título" aria-label="Buscar apostila">' : ''}<button class="btn" id="pj-arquivo">Abrir arquivo</button><button class="btn pri" data-ir="nova">＋ Nova apostila</button></div></div>
+  <div class="grade-pj" id="pj-grade">${conta ? '<div class="carregando">Carregando suas apostilas…</div>' : cartaoPj(st, true)}</div></div>`;
+  $('#pj-arquivo').onclick = () => $('#b-abrir').click();
+  if (!conta) return;
+  const grade = $('#pj-grade'), {getDocs, query, orderBy, doc, deleteDoc} = VENDA.fb.fs;
+  descarregarNuvem(); await NUVEM.fila;
+  let docs;
+  try { docs = (await getDocs(query(colApostilas(), orderBy('salvoEm', 'desc')))).docs; }
+  catch(e){ grade.innerHTML = '<div class="vazio-pg"><b>Não consegui carregar suas apostilas</b>Confira a internet e abra esta página de novo.</div>'; return; }
+  if (!grade.isConnected || pagAtual !== 'projetos') return;
+  const itens = docs.map(d => { let a = null; try { a = JSON.parse(d.data().dados); } catch(_){}
+    return {id:d.id, snap:d, titulo:d.data().titulo || 'Sem título', salvoEm:d.data().salvoEm || 0, capa: d.id===st.id ? st.capa : (a && a.capa) || {titulo:d.data().titulo}, n: a && Array.isArray(a.blocos) ? a.blocos.length : 0}; });
+  if (!itens.some(x=>x.id===st.id) && st.blocos.length) itens.unshift({id:st.id, titulo:st.capa.titulo, salvoEm:st.salvoEm, capa:st.capa, n:st.blocos.length});
+  const desenhar = () => {
+    const b = ($('#pj-busca').value || '').trim().toLowerCase();
+    const lista = itens.filter(x => !b || x.titulo.toLowerCase().includes(b));
+    grade.innerHTML = lista.length ? lista.map(x => cartaoPj({capa:{...x.capa, titulo:x.titulo}, salvoEm:x.salvoEm, blocos:{length:x.n}, id:x.id}, x.id===st.id)).join('')
+      : `<div class="vazio-pg"><b>${b ? 'Nenhuma apostila com esse título' : 'Nenhuma apostila ainda'}</b>${b ? 'Tente outra palavra.' : 'Crie a primeira com a IA ou comece de um modelo pronto.'}</div>`;
+  };
+  desenhar();
+  $('#pj-busca').oninput = desenhar;
+  grade.onclick = async e => {
+    const bt = e.target.closest('[data-pj]'); if (!bt) return;
+    const id = bt.closest('[data-id]').dataset.id, x = itens.find(i=>i.id===id); if (!x) return;
+    if (bt.dataset.pj === 'abrir' && id === st.id){ irPara('editor'); return; }
+    if (bt.dataset.pj === 'del'){
+      if (!bt.dataset.certeza){ bt.dataset.certeza = 1; bt.textContent = 'Excluir mesmo?'; return; }
+      bt.disabled = true;
+      try { await deleteDoc(doc(colApostilas(), id)); itens.splice(itens.indexOf(x), 1); desenhar(); aviso('Apostila excluída.'); }
+      catch(_){ bt.disabled = false; aviso('Não consegui excluir. Confira a internet.'); }
+      return;
+    }
+    bt.disabled = true; const antes = bt.textContent; bt.textContent = bt.dataset.pj==='dup' ? 'Copiando…' : 'Abrindo…';
+    try {
+      descarregarNuvem();
+      const a = x.snap ? await apostilaDoDoc(x.snap) : JSON.parse(JSON.stringify(st));
+      if (bt.dataset.pj === 'dup'){
+        a.id = novoId(); a.salvoEm = 0; delete a.dono; a.capa.titulo = (a.capa.titulo || 'Apostila') + ' (cópia)';
+        st = a; contar('apostilas'); salvarLocal(); renderCapa(); renderEditor(); aba('cont'); irPara('editor'); aviso('Cópia criada. É ela que está aberta agora.');
+      } else { mostrarApostila(a); marcarNuvem('ok'); aviso('Apostila aberta.'); }
+    } catch(_){ bt.disabled = false; bt.textContent = antes; aviso('Não consegui abrir essa apostila. Confira a internet.'); }
+  };
+}
+function cartaoPj(a, aberta){
+  const c = a.capa || {}, n = a.blocos ? a.blocos.length : 0, conta = nuvemOn();
+  return `<article class="pj" data-id="${esc(a.id || '')}">
+    <div class="pj-capa">${miniCapa(c, 168)}${aberta ? '<span class="pj-tag">Aberta agora</span>' : ''}</div>
+    <div class="pj-info"><div class="pj-chips">${[c.disciplina, c.turma].filter(Boolean).map(x=>`<span>${esc(x)}</span>`).join('')}</div>
+      <h3>${esc(c.titulo || 'Sem título')}</h3><small>${n} ${n===1?'bloco':'blocos'}${a.salvoEm ? ' · editada ' + tempoRel(a.salvoEm) : ''}</small></div>
+    <div class="pj-acoes">${conta && !aberta ? '<button class="btn peq perigo" data-pj="del">Excluir</button>' : ''}${conta ? '<button class="btn peq" data-pj="dup">Duplicar</button>' : ''}<button class="btn peq pri" data-pj="abrir" ${conta ? '' : 'data-ir="editor"'}>Abrir</button></div>
+  </article>`;
+}
+
+/* Atividades e provas */
+const TIPOS_Q = [['multipla','Múltipla escolha'],['vf','Verdadeiro ou falso'],['aberta','Perguntas abertas'],['complete','Complete as lacunas'],['associe','Associe as colunas'],['interpretacao','Interpretação de texto'],['problemas','Situações-problema'],['caso','Estudo de caso']];
+const PUBLICOS_Q = ['Educação Infantil','Ensino Fundamental I','Ensino Fundamental II','Ensino Médio','EJA','Ensino Técnico','Ensino Superior','Crianças (EBD)','Adolescentes (EBD)','Jovens e adultos (EBD)','Curso livre'];
+function textoDaApostila(){
+  const limpo = t => String(t||'').replace(/\*\*|==|\*/g, '').trim();
+  return st.blocos.map(b => b.tipo==='titulo' || b.tipo==='subtitulo' ? '\n' + limpo(b.texto) + '\n'
+    : ['texto','destaque','citacao','acao','epigrafe','cita','imgtexto'].includes(b.tipo) ? limpo(b.texto)
+    : b.tipo==='abertura' ? limpo(b.titulo) + '\n' + limpo(b.texto)
+    : ['lista','cartao','discuta'].includes(b.tipo) ? linhas(b.itens).map(x=>'- ' + limpo(x)).join('\n') : '').filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 6000);
+}
+function promptAtividade(a){
+  const tipos = TIPOS_Q.filter(([k])=>a.tipos.includes(k)).map(([,n])=>n).join(', ');
+  return `Você é um professor experiente e cria atividades didáticas em português do Brasil.
+Crie uma folha de atividades sobre: "${a.tema}".
+Disciplina: ${a.disc || 'não informada'}. Público: ${a.publico || 'não informado'}. Dificuldade: ${a.dif}.
+Faça exatamente ${a.n} questões, distribuídas entre estes tipos: ${tipos}.
+Como montar cada tipo:
+- Múltipla escolha: bloco "multipla" com 4 alternativas e "correta" (índice a partir de 0). Varie a posição da correta.
+- Verdadeiro ou falso: bloco "vf" com 4 ou 5 afirmações.
+- Perguntas abertas e situações-problema: bloco "aberta" com "linhas" de 3 a 6 e a "resposta" esperada, curta.
+- Complete as lacunas: bloco "aberta" com a frase e as lacunas "______" no enunciado, "linhas":1 e as palavras certas em "resposta".
+- Associe as colunas: um bloco "tabela" com duas colunas (coluna A numerada; coluna B com letras e em outra ordem) e logo depois um bloco "aberta" pedindo a associação, com a "resposta" (ex.: 1-c, 2-a, 3-b).
+- Interpretação de texto: um bloco "texto" curto (1 a 3 parágrafos) e depois as questões sobre ele.
+- Estudo de caso: um bloco "destaque" com "estilo":"curiosidade" e "titulo":"Estudo de caso" contando a situação, e depois as questões.
+${a.base ? `Baseie as questões neste conteúdo e não cobre nada que não esteja nele:\n"""\n${a.base}\n"""\n` : ''}Comece com um bloco "titulo" curto (com "numerar":false) e um bloco "texto" de uma ou duas frases com as instruções para o aluno. Não use imagens.
+Use linguagem adequada ao público, conteúdo correto e enunciados claros. Em "titulo" do JSON, escreva o título da folha (ex.: "Atividades: ${a.tema}").
+${ESQUEMA}`;
+}
+function aplicarAtividade(r, a){
+  const blocos = normalizar(r && r.blocos).filter(b => !['imagem','imgtexto','galeria','abertura'].includes(b.tipo));
+  if (!blocos.some(b => ['multipla','vf','aberta'].includes(b.tipo))) throw new Error('vazio');
+  const nQ = blocos.filter(b => ['multipla','vf','aberta'].includes(b.tipo)).length;
+  if (a.destino === 'fim'){
+    st.blocos.push({id:uid(), tipo:'quebra'}, ...blocos);
+    if (a.gabarito) st.capa.gabarito = true;
+  } else {
+    descarregarNuvem();
+    st = {capa:{...st.capa, titulo:r.titulo || ('Atividades: ' + a.tema), subtitulo:r.subtitulo || '', disciplina:a.disc, turma:a.publico, mostrarCapa:false, sumario:false, cabecalho:true, gabarito:a.gabarito, contracapa:false, imagem:'', contraImagem:'', contraTexto:'', contraFrase:'', contraFonte:''}, blocos, id:a.id || novoId()};
+    contar('apostilas');
+  }
+  salvarLocal(); fecharModal(); renderCapa(); renderEditor(); aba('cont'); irPara('editor');
+  aviso(`${nQ} ${nQ===1?'questão pronta':'questões prontas'}${a.gabarito ? ', com gabarito no final' : ''}. Revise e baixe o PDF.`);
+}
+function renderAtividades(){
+  const el = $('#pg-atividades'), f = renderAtividades.ult || {tipos:['multipla','vf','aberta'], n:10, dif:'Médio', gabarito:true, destino:'nova'};
+  const temAp = st.blocos.some(b => ['texto','lista','destaque'].includes(b.tipo));
+  el.innerHTML = `<div class="pg-larga"><div class="duas">
+  <form class="cx" id="at-form" novalidate>
+    <span class="sobre">Gerador de atividades</span><h3>Monte a folha de questões</h3><p class="cx-sub">Escolha o assunto e os tipos de questão. A folha vem pronta para imprimir, com cabeçalho do aluno e gabarito.</p>
+    <div class="campo"><label for="at-tema">Tema / assunto *</label><input type="text" id="at-tema" value="${esc(f.tema ?? '')}" placeholder="Ex.: Frações, Parábola do Semeador, Sistema Solar"></div>
+    <div class="linha2">
+      <div class="campo"><label for="at-disc">Disciplina</label><input type="text" id="at-disc" value="${esc(f.disc ?? st.capa.disciplina ?? '')}" placeholder="Ex.: Matemática"></div>
+      <div class="campo"><label for="at-pub">Público</label><input type="text" id="at-pub" list="at-pubs" value="${esc(f.publico ?? st.capa.turma ?? '')}" placeholder="Escolha ou escreva"><datalist id="at-pubs">${PUBLICOS_Q.map(p=>`<option value="${esc(p)}">`).join('')}</datalist></div>
+    </div>
+    <div class="linha2">
+      <div class="campo"><label for="at-dif">Dificuldade</label><select id="at-dif">${['Fácil','Médio','Difícil','Misturada'].map(d=>`<option ${d===f.dif?'selected':''}>${d}</option>`).join('')}</select></div>
+      <div class="campo"><label for="at-n">Número de questões</label><input type="number" id="at-n" min="1" max="30" value="${+f.n || 10}"></div>
+    </div>
+    <span class="rot">Tipos de questão</span>
+    <div class="marcas">${TIPOS_Q.map(([k,n])=>`<label><input type="checkbox" name="at-tipo" value="${k}" ${f.tipos.includes(k)?'checked':''}> ${n}</label>`).join('')}</div>
+    <div class="campo"><label for="at-base" style="display:flex;justify-content:space-between;align-items:center">Texto de base (opcional)${temAp ? '<button type="button" class="btn peq" id="at-puxar" style="text-transform:none;letter-spacing:0">Usar a apostila aberta</button>' : ''}</label>
+      <textarea id="at-base" rows="4" placeholder="Cole um texto, resumo ou capítulo. As questões serão feitas só sobre ele.">${esc(f.base || '')}</textarea></div>
+    <span class="rot">Onde colocar</span>
+    <div class="destino">
+      <label><input type="radio" name="at-dest" value="nova" ${f.destino!=='fim'?'checked':''}><span><b>Folha nova</b><small>Uma folha de atividades separada, salva em “Minhas apostilas”.</small></span></label>
+      <label><input type="radio" name="at-dest" value="fim" ${f.destino==='fim'?'checked':''}><span><b>No fim da apostila aberta</b><small>“${esc(st.capa.titulo || 'Sem título')}”, numa página nova.</small></span></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="at-gab" ${f.gabarito?'checked':''}> Incluir gabarito no final</label>
+    <div id="at-status"></div>
+    <div class="botoes-col" id="at-botoes"></div>
+    <div id="at-semi"></div>
+  </form>
+  <aside class="lado-info cx"><span class="sobre">Como fica</span><h3>Questões variadas e bem escritas</h3><p class="cx-sub">Cada questão vira um bloco editável: dá para trocar o texto, mudar a ordem ou apagar antes de baixar.</p>
+    <div class="exemplo-q">
+      <div class="q"><span class="tipo-tag">Múltipla escolha</span><b>1. Qual fração é equivalente a 1/2?</b><span>a) 2/3 &nbsp; b) 2/4 &nbsp; c) 3/5 &nbsp; d) 1/4</span></div>
+      <div class="q"><span class="tipo-tag">Verdadeiro ou falso</span><b>2. Marque V ou F.</b><span>( ) Toda fração com numerador 1 é menor que 1.</span></div>
+      <div class="q"><span class="tipo-tag">Complete</span><b>3. Na fração 3/4, o número 4 é o ______.</b></div>
+      <div class="q"><span class="tipo-tag">Gabarito</span><b>Respostas na última página</b><span>Liga e desliga em “Capa e estilo”.</span></div>
+    </div></aside>
+  </div></div>`;
+  const ler = () => ({tema:$('#at-tema').value.trim(), disc:$('#at-disc').value.trim(), publico:$('#at-pub').value.trim(), dif:$('#at-dif').value,
+    n:Math.max(1, Math.min(30, Math.round(+$('#at-n').value || 10))), tipos:[...document.querySelectorAll('[name=at-tipo]:checked')].map(i=>i.value),
+    base:$('#at-base').value.trim().slice(0, 6000), destino:document.querySelector('[name=at-dest]:checked').value, gabarito:$('#at-gab').checked});
+  const pegar = () => { const a = ler(); renderAtividades.ult = a;
+    if (!a.tema){ $('#at-tema').focus(); erroEm($('#at-status'), 'Escreva o tema das questões.'); return null; }
+    if (!a.tipos.length){ erroEm($('#at-status'), 'Marque pelo menos um tipo de questão.'); return null; }
+    $('#at-status').innerHTML = ''; return a; };
+  el.querySelector('#at-form').onsubmit = e => e.preventDefault();   // os botões dos passos grátis não podem recarregar a página
+  el.querySelector('#at-form').oninput = () => { renderAtividades.ult = ler(); botoes(); };
+  if ($('#at-puxar')) $('#at-puxar').onclick = () => { $('#at-base').value = textoDaApostila(); if (!$('#at-tema').value.trim()) $('#at-tema').value = st.capa.titulo || ''; renderAtividades.ult = ler(); aviso('Texto da apostila aberta colocado como base.'); };
+  const botoes = () => {
+    const a = ler(), idAlvo = a.destino==='fim' ? st.id : null, paga = idAlvo && apostilaPaga(idAlvo);
+    const selo = cobraCredito() ? `<span class="selo">${paga ? '✓ já paga' : '✦ 1 crédito'}</span>` : '';
+    $('#at-botoes').innerHTML = (iaDisp ? `<button type="button" class="btn ia grande" id="at-ir">✨ Gerar atividade${selo}</button>` : '')
+      + `<button type="button" class="btn${iaDisp ? '' : ' ia grande'}" id="at-gratis">${iaDisp ? 'Fazer de graça com o ChatGPT ou o Gemini' : '✦ Gerar com o ChatGPT ou o Gemini (grátis)'}</button>`;
+    if ($('#at-ir')) $('#at-ir').onclick = gerar;
+    $('#at-gratis').onclick = () => { const a = pegar(); if (!a) return;
+      semiPassos($('#at-semi'), {pedido:() => { const x = pegar(); return x && promptAtividade(x); }, botao:'Montar a folha', cortado:'Peça menos questões e copie o pedido de novo.', usar:r => aplicarAtividade(r, ler()), jaCopiar:true}); };
+  };
+  async function gerar(){
+    const a = pegar(); if (!a) return;
+    a.id = a.destino==='fim' ? (st.id || (st.id = novoId())) : novoId();
+    if (!podeGerar(a.id)){ $('#at-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 8px">${SEM_CREDITO}</p>`; return; }
+    const bt = $('#at-ir'); bt.disabled = true; $('#at-status').innerHTML = '<div class="carregando" style="margin-bottom:8px">Escrevendo as questões… leva alguns segundos.</div>';
+    try { aplicarAtividade(await iaJSON(promptAtividade(a), a.id), a); }
+    catch(e){
+      if (!bt.isConnected) return; bt.disabled = false;
+      const msg = e && e.code==='rate_limited' ? 'Muitos pedidos seguidos. Espere um minuto e tente de novo.' : e && e.code==='sem_credito' ? SEM_CREDITO : e && e.msg ? esc(e.msg) : 'Não consegui gerar agora. Tente de novo ou faça de graça com o ChatGPT.';
+      $('#at-status').innerHTML = `<p class="dica-campo" style="color:var(--danger);margin:6px 0 8px">${msg}</p>`;
+    }
+  }
+  botoes();
+}
+
+/* Capas e imagens */
+function renderCapas(){
+  const el = $('#pg-capas'), c = st.capa, nImg = lugaresDeImagem().filter(x=>x.t!=='capa' && x.t!=='contra').length;
+  el.innerHTML = `<div class="pg-larga">
+  <div class="pg-cabeca"><div><span class="sobre">Estúdio visual</span><h2>Capas e imagens</h2><p>Para a apostila aberta: <b>${esc(c.titulo || 'Sem título')}</b>. O app escreve o pedido (prompt) da imagem; você gera de graça no ChatGPT ou no Gemini e coloca aqui com um clique.</p></div></div>
+  <div class="capas-grade">
+    <div class="cx capas-prev"><figure>${miniCapa(c, 220)}<figcaption>Capa</figcaption></figure>${c.contracapa ? `<figure>${miniContra(c, 220)}<figcaption>Contracapa</figcaption></figure>` : ''}</div>
+    <div class="cartoes-acao">
+      <button class="atalho" id="cp-capa" style="--cor:#2f52e6"><span class="ico-cx">${ic('imagem')}</span><b>Imagem da capa</b><small>${c.imagem ? 'Trocar a imagem da capa.' : 'Ainda sem imagem. Gere uma ilustração que resuma o tema.'}</small></button>
+      <button class="atalho" id="cp-contra" style="--cor:#5a3fd8"><span class="ico-cx">${ic('livro')}</span><b>Contracapa</b><small>${c.contracapa ? 'Frase, texto e imagem da última folha, escritos pela IA.' : 'Ligue a contracapa e peça o texto para a IA.'}</small></button>
+      <button class="atalho" id="cp-ilus" style="--cor:#0e7c86"><span class="ico-cx">${ic('faisca')}</span><b>Ilustrações das páginas</b><small>${nImg ? `${nImg} ${nImg===1?'lugar':'lugares'} para imagem nesta apostila.` : 'Nenhum lugar para imagem ainda: adicione um bloco de imagem no editor.'}</small></button>
+      <button class="atalho" id="cp-estilo" style="--cor:#b7791f"><span class="ico-cx">${ic('lapis')}</span><b>Título, cores e fonte</b><small>Edite os textos da capa, a cor principal e a tipografia.</small></button>
+    </div>
+  </div></div>`;
+  $('#cp-capa').onclick = () => abrirGerarImagem('capa');
+  $('#cp-contra').onclick = () => abrirContracapa();
+  $('#cp-ilus').onclick = () => abrirIlustracoes();
+  $('#cp-estilo').onclick = () => { irPara('editor'); aba('capa'); vista('editar'); };
+}
+
+/* Aprenda a usar */
+const AULAS = [
+  ['Criar uma apostila com a IA', `<ol><li>Clique em <b>Criar apostila com IA</b> no menu.</li><li>Siga as 5 etapas: conteúdo, profundidade, base, estilo e gerar.</li><li>Clique em <b>Gerar apostila completa</b>. A IA planeja e escreve todas as páginas.</li><li>Não gostou de uma página? Use <b>Gerar novamente</b> só nela.</li></ol>`],
+  ['Fazer de graça com o ChatGPT ou o Gemini', `<ol><li>Na janela de criar, escolha <b>Semiautomático</b>.</li><li>Clique em <b>Copiar pedido</b> e cole numa conversa nova do ChatGPT, Gemini ou Claude.</li><li>Copie a resposta inteira (ela começa com <b>{</b>) e cole no app.</li></ol>`],
+  ['Colocar as ilustrações', `<ol><li>Abra <b>Capas e imagens</b> e escolha a capa, a contracapa ou as ilustrações das páginas.</li><li>Copie o prompt pronto e gere a imagem no ChatGPT ou no Gemini.</li><li>Baixe a imagem e arraste para o app, ou cole com Ctrl+V.</li></ol>`],
+  ['Criar atividades e provas', `<ol><li>Abra <b>Atividades e provas</b>.</li><li>Escreva o tema, marque os tipos de questão e escolha quantas quer.</li><li>Para cobrar só o que foi ensinado, use <b>Usar a apostila aberta</b> como texto de base.</li></ol>`],
+  ['Editar textos, cores e páginas', `<ol><li>Em <b>Editar apostila</b>, cada parte é um bloco: mude o texto, a ordem (setas) ou apague.</li><li>Na aba <b>Capa e estilo</b>, troque título, cor principal e tipografia.</li><li>Use <b>+ Adicionar bloco</b> para incluir caixas, citações, tabelas, questões ou quebra de página.</li></ol>`],
+  ['Baixar o PDF e imprimir', `<ol><li>Clique em <b>Baixar PDF</b> no alto do editor.</li><li>Imprima em A4. As páginas já vêm numeradas, com capa e contracapa.</li><li>Se o PDF não abrir no celular, use <b>Baixar HTML</b> e imprima pelo navegador.</li></ol>`],
+  ['Instalar no celular', `<p>No Chrome ou no Edge, abra o menu (⋮) e escolha <b>Instalar app</b>. No iPhone, abra no Safari, toque em <b>Compartilhar</b> e em <b>Adicionar à Tela de Início</b>.</p>`]
+];
+function renderAprender(){
+  $('#pg-aprender').innerHTML = `<div class="pg-larga">
+  <div class="pg-cabeca"><div><span class="sobre">Comece aqui</span><h2>Aprenda a criar apostilas que <span class="marca-texto">encantam</span></h2><p>Veja o app funcionando e siga as aulas curtas. Em poucos minutos você tem a primeira apostila pronta para imprimir.</p></div>
+  <div class="pg-cab-acoes"><button class="btn ia" data-ir="criar">✦ Criar minha apostila</button></div></div>
+  <div class="inicio-grade">
+    <div class="video-cx"><video src="../midia/demonstracao.mp4" poster="../midia/demonstracao.jpg" controls playsinline preload="none" aria-label="Vídeo de demonstração do Criador de Apostilas"></video></div>
+    <div class="aulas">${AULAS.map(([t, c], i)=>`<details${i===0?' open':''}><summary><span class="n">${i+1}</span>${t}</summary>${c}</details>`).join('')}</div>
+  </div></div>`;
+}
+
+/* Novidades */
+const NOVIDADES = [
+  {id:'2026-11-05', data:'5 de novembro de 2026', titulo:'Novo estúdio', itens:['Menu lateral com todas as ferramentas à mão', 'Página inicial: escreva o tema e comece na hora', 'Atividades e provas: 8 tipos de questão, com gabarito', 'Capas e imagens num lugar só', 'Minhas apostilas com as capas, busca e “Duplicar”', 'Tema escuro']},
+  {id:'2026-11-04', data:'4 de novembro de 2026', titulo:'Créditos e apostila completa', itens:['Botão “Gerar apostila completa”: 1 crédito faz a apostila inteira', '“Gerar novamente” e a contracapa não gastam mais créditos', 'Compra de créditos por Pix']},
+  {id:'2026-11-03', data:'3 de novembro de 2026', titulo:'Criador em 5 etapas', itens:['Conteúdo, profundidade, base bíblica, estilo e gerar', 'Capa e contracapa com ajuda da IA', 'Modelo “Revista de estudo”, no estilo das revistas de EBD']},
+  {id:'2026-10-30', data:'Outubro de 2026', titulo:'Apostilas na sua conta', itens:['As apostilas ficam salvas na conta e abrem em qualquer aparelho', 'Cinco modelos novos e vídeo de demonstração']}
+];
+function renderNovidades(){
+  gravarLocal('apostilas-novidades', NOVIDADES[0].id); $('#gv-novo').hidden = true;
+  $('#pg-novidades').innerHTML = `<div class="pg-larga">
+  <div class="pg-cabeca"><div><span class="sobre">Atualizações</span><h2>Novidades</h2><p>O Criador de Apostilas melhora toda semana. Veja o que chegou.</p></div></div>
+  <ol class="linha-tempo">${NOVIDADES.map(n=>`<li class="cx"><time>${esc(n.data)}</time><h3>${esc(n.titulo)}</h3><ul>${n.itens.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></li>`).join('')}</ol></div>`;
+}
+
+let _capaEx; const capaExemplo = () => _capaEx || (_capaEx = MODELOS[1].fn().capa);
 
 const guardarCliente = () => { try { localStorage.setItem('apostilas-cliente', JSON.stringify(VENDA.cliente)); } catch(_){} };
 function atualizarConta(){
@@ -2342,6 +2951,7 @@ function atualizarConta(){
   renderGaveta();
   b.textContent = VENDA.admin ? 'Minha conta' : !AUTO() ? 'Minha conta' : `Minha conta · ${VENDA.cliente?.creditos||0} ${(VENDA.cliente?.creditos||0)===1?'crédito':'créditos'}`;
   $('#b-painel').hidden = !VENDA.admin;
+  if (pagAtual==='inicio') renderInicio();
 }
 function travaVenda(titulo, msg, extra){
   $('#trava-tit').textContent = titulo; $('#trava-msg').textContent = msg; $('#trava-extra').innerHTML = extra || ''; $('#trava').hidden = false;
@@ -2589,8 +3199,8 @@ async function apostilaDoDoc(snap){
   if (!valido(d)) throw new Error('invalida');
   return {capa:{numFig:true, imagem:'', imagemEstilo:'destaque', ...d.capa}, blocos:d.blocos, id:snap.id, salvoEm:x.salvoEm || 0, dono:uidU, plano:d.plano};
 }
-function mostrarApostila(nova){
-  st = nova; salvarLocal(true); renderCapa(); renderEditor(); aba(st.capa.mostrarCapa ? 'capa' : 'cont'); vista('editar');
+function mostrarApostila(nova, quieto){
+  st = nova; salvarLocal(true); renderCapa(); renderEditor(); aba(st.capa.mostrarCapa ? 'capa' : 'cont'); if (quieto) atualizarPagina(); else vista('editar');
 }
 
 // Ao entrar: continua de onde parou, mesmo que tenha sido em outro aparelho
@@ -2605,15 +3215,15 @@ async function sincronizarAoEntrar(){
     if (minha){
       const s = await getDoc(doc(colApostilas(), st.id)), nuvem = s.exists() ? (s.data().salvoEm || 0) : -1;
       if (!intocada()) return;
-      if (nuvem > st.salvoEm){ mostrarApostila(await apostilaDoDoc(s)); marcarNuvem('ok'); aviso('Abrimos a versão mais nova desta apostila, salva em outro aparelho.'); }
+      if (nuvem > st.salvoEm){ mostrarApostila(await apostilaDoDoc(s), true); marcarNuvem('ok'); aviso('Abrimos a versão mais nova desta apostila, salva em outro aparelho.'); }
       else if (nuvem < st.salvoEm){ st.dono = eu; enfileirarNuvem(); }
       else marcarNuvem('ok');
       return;
     }
     const q = await getDocs(query(colApostilas(), orderBy('salvoEm', 'desc'), limit(1)));
     if (!intocada()) return;
-    if (!q.empty){ mostrarApostila(await apostilaDoDoc(q.docs[0])); marcarNuvem('ok'); aviso('Abrimos sua última apostila. As outras estão em “Minhas apostilas”.'); }
-    else if (st.dono && st.dono !== eu) mostrarApostila({...exemplo(), id:novoId(), salvoEm:0}); // a apostila neste aparelho é de outra conta
+    if (!q.empty){ mostrarApostila(await apostilaDoDoc(q.docs[0]), true); marcarNuvem('ok'); aviso('Abrimos sua última apostila. As outras estão em “Minhas apostilas”.'); }
+    else if (st.dono && st.dono !== eu) mostrarApostila({...exemplo(), id:novoId(), salvoEm:0}, true); // a apostila neste aparelho é de outra conta
   } catch(e){ marcarNuvem(navigator.onLine ? 'erro' : 'offline'); }
 }
 
@@ -2648,7 +3258,7 @@ async function abrirMinhas(){
     catch(_){ b.disabled = false; b.textContent = 'Abrir'; aviso('Não consegui abrir essa apostila. Confira a internet.'); }
   };
 }
-$('#b-minhas').onclick = abrirMinhas;
+$('#b-minhas').onclick = () => irPara('projetos');
 
 /* --- Painel admin (cadastrar clientes, dar créditos, bloquear) --- */
 function abrirAdm(){
@@ -2997,7 +3607,10 @@ let prontoOk; const PRONTO = new Promise(r => prontoOk = r);
 (async ()=>{
   if (DEMO){ const m = MODELOS.find(x=>x.id===DEMO); if (m){ st = m.fn(); if (!new URLSearchParams(location.search).has('capa')) st.capa.mostrarCapa = false; } document.body.classList.add('demo'); document.documentElement.style.overflow = 'hidden'; document.body.dataset.vista = 'ver'; $('#zoom').classList.add('exportando'); }
   else await carregarSalvo();
-  renderCapa(); renderEditor(); aba('cont'); prontoOk();
+  renderCapa(); renderEditor(); aba('cont');
+  if (DEMO){ $('#pg-inicio').hidden = true; $('#pg-editor').hidden = false; }
+  else { aplicarTema(); ajustarGaveta(); renderGaveta(); irPara((location.hash.match(/^#\/(\w+)/)||[])[1] || 'inicio', true); }
+  prontoOk();
   document.fonts && document.fonts.ready.then(ajustarZoom);
 })();
 if (DEMO){ /* só mostra a página */ }
