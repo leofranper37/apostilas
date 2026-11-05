@@ -15,6 +15,8 @@ const MODELO = defineString("ANTHROPIC_MODEL", { default: "claude-opus-5-5" });
 const ESFORCO = defineString("ANTHROPIC_EFFORT", { default: "low" });
 // Mesma lista de config.js e firestore.rules
 const ADMINS = ["admin@apostilas.local"];
+// Pedidos de IA que 1 crédito cobre numa mesma apostila (mesmo número em app/index.html: LIMITE_IA)
+const LIMITE = 40;
 
 const SISTEMA = {
   json: "Você é o gerador de conteúdo do app Criador de Apostilas. Escreva apostilas didáticas corretas em português do Brasil e responda exatamente no formato JSON pedido, sem nenhum texto fora do JSON.",
@@ -25,21 +27,47 @@ exports.gerar = onCall(
   { region: "southamerica-east1", secrets: [CHAVE], timeoutSeconds: 300, memory: "512MiB", maxInstances: 10 },
   async (req) => {
     if (!req.auth) throw new HttpsError("unauthenticated", "Entre na sua conta de novo.");
-    const { tipo, pedido } = req.data || {};
+    const { tipo, pedido, apostila } = req.data || {};
     if (!["json", "svg"].includes(tipo) || typeof pedido !== "string" || !pedido.trim() || pedido.length > 12000)
       throw new HttpsError("invalid-argument", "Pedido inválido.");
+    // 1 crédito vale para uma apostila inteira: o primeiro pedido dela desconta 1 crédito; os seguintes
+    // (páginas, "gerar novamente", contracapa) não descontam, até LIMITE pedidos. Passou disso, desconta mais 1.
+    if (typeof apostila !== "string" || !/^[A-Za-z0-9_-]{6,64}$/.test(apostila))
+      throw new HttpsError("invalid-argument", "Apostila inválida. Atualize a página e tente de novo.");
 
     const ehAdmin = ADMINS.includes(req.auth.token.email);
     const ref = db.collection("clientes").doc(req.auth.uid);
+    const gRef = ref.collection("geracoes").doc(apostila);
+    let cobrou = false, antes = 0, usos = 0;
     if (!ehAdmin) {
       await db.runTransaction(async (t) => {
-        const s = await t.get(ref);
+        const s = await t.get(ref), g = await t.get(gRef);
         if (!s.exists || !s.get("ativo")) throw new HttpsError("permission-denied", "Seu acesso não está liberado.");
-        if ((s.get("creditos") || 0) <= 0) throw new HttpsError("resource-exhausted", "Sem créditos.");
-        t.update(ref, { creditos: FieldValue.increment(-1), usosIA: FieldValue.increment(1), ultimoAcesso: FieldValue.serverTimestamp() });
+        antes = g.exists ? (g.get("usos") || 0) : -1;   // -1: apostila nova
+        const agora = FieldValue.serverTimestamp();
+        if (antes < 0 || antes >= LIMITE) {
+          if ((s.get("creditos") || 0) <= 0) throw new HttpsError("resource-exhausted", "Sem créditos.");
+          t.update(ref, { creditos: FieldValue.increment(-1), usosIA: FieldValue.increment(1), ultimoAcesso: agora });
+          t.set(gRef, { usos: 1, creditos: FieldValue.increment(1), ultimoUso: agora, ...(antes < 0 ? { criadoEm: agora } : {}) }, { merge: true });
+          cobrou = true; usos = 1;
+        } else {
+          t.update(gRef, { usos: FieldValue.increment(1), ultimoUso: agora });
+          t.update(ref, { ultimoAcesso: agora });
+          usos = antes + 1;
+        }
       });
     }
-    const devolver = () => ehAdmin ? null : ref.update({ creditos: FieldValue.increment(1), usosIA: FieldValue.increment(-1) }).catch(() => {});
+    // deu errado: desfaz exatamente o que este pedido fez
+    const devolver = async () => {
+      if (ehAdmin) return;
+      try {
+        if (!cobrou) return await gRef.update({ usos: FieldValue.increment(-1) });
+        const b = db.batch();
+        b.update(ref, { creditos: FieldValue.increment(1), usosIA: FieldValue.increment(-1) });
+        if (antes < 0) b.delete(gRef); else b.update(gRef, { usos: antes, creditos: FieldValue.increment(-1) });
+        await b.commit();
+      } catch (_) {}
+    };
 
     try {
       const claude = new Anthropic({ apiKey: CHAVE.value() });
@@ -60,7 +88,7 @@ exports.gerar = onCall(
       if (msg.stop_reason === "max_tokens") throw new Error("cortado");
       const texto = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
       if (!texto) throw new Error("vazio");
-      return { texto };
+      return { texto, cobrou, usos: ehAdmin ? 0 : usos, limite: LIMITE };
     } catch (e) {
       console.error("falha na IA:", e);
       await devolver();

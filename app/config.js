@@ -14,8 +14,18 @@ window.APOSTILAS_CONFIG = {
   // Usuários administradores (abrem o Painel admin). Se mudar aqui, mude também em firestore.rules e functions/index.js
   admins: ['admin'],
   // Modo automático com IA (pago: precisa do plano Blaze + chave da IA). false = tudo grátis
+  // Com true: aparecem o saldo no menu, "Comprar créditos" e o botão "Gerar apostila completa · 1 crédito".
+  // Só ligue depois de ativar o servidor (veja LEIA-ME.md > "Vender créditos").
   modoAutomatico: false,
-  creditosIniciais: 30,     // sugestão de créditos ao cadastrar um cliente (só com modoAutomatico)
+  creditosIniciais: 1,      // créditos de presente ao cadastrar um cliente (só com modoAutomatico)
+
+  // Pacotes de créditos à venda: 1 crédito = 1 apostila completa gerada pela IA
+  // (todas as páginas, "gerar novamente" e a contracapa, até 40 pedidos por apostila)
+  pacotes: [
+    {creditos: 5,  valor: 19.90},
+    {creditos: 10, valor: 34.90, destaque: 'Mais vendido'},
+    {creditos: 30, valor: 89.90, destaque: 'Melhor preço'}
+  ],
   contato: 'https://wa.me/5524992122018?text=Ol%C3%A1!%20Quero%20conhecer%20o%20Criador%20de%20Apostilas.',  // opcional: link do seu WhatsApp ou página de venda, mostrado na tela de login
   whatsapp: '5524992122018',  // só números, com 55 e DDD: recebe os comprovantes do Pix
 

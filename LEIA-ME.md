@@ -10,14 +10,18 @@ Também abre em https://leofranper37.github.io/apostilas/ (app em /apostilas/app
 - O administrador (usuário `admin`) não gasta créditos.
 
 ## Gerador de apostilas (botão "Criar com IA")
-1. Escolha o **tipo** (escolar, qualquer assunto, educação infantil, estudo bíblico, música e cifras), o **tema**, a **quantidade de páginas**, o **idioma** e o **estilo de ilustração**.
-2. Clique em **Gerar sugestões de páginas** (a IA monta o plano) ou **Definir manualmente**.
-3. No **Planejamento**, mude títulos, escreva instruções para cada página, mude a ordem ou adicione páginas.
-4. Gere **uma página por vez** (cada uma tem "Gerar novamente") ou todas de uma vez. Cada página começa numa folha nova.
-**Modelo das páginas:** *Revista de estudo* (texto corrido, frase de destaque, citações recuadas, quadros "Discuta", Introdução e Conclusão sem número e Referências, como as revistas de EBD), *Revista visual* ou *Apostila didática*.
-Em **Seu material de base**, cole o seu esboço ou as suas anotações: a IA usa esse texto como fonte principal (até 5 mil letras por pedido).
-Também existe um modelo pronto "Revista de estudo (EBD)" em **Nova**.
+Passo a passo em 5 etapas:
+1. **Conteúdo**: tipo de apostila, tema, público e objetivo.
+2. **Profundidade**: nível (introdutório a completo), modelo das páginas (*Revista de estudo*, *Revista visual* ou *Apostila didática*), quantidade de páginas, idioma e atividades.
+3. **Base bíblica / Material de apoio**: passagens (ou "sugerir automaticamente"), a lista de páginas ou lições e o seu esboço ou material (a IA usa como fonte principal, até 5 mil letras por pedido).
+4. **Estilo**: estilo de escrita, estilo visual das ilustrações, paleta de cores e personagem com a sua foto.
+5. **Gerar**: resumo de tudo e o planejamento das páginas pela IA (ou "Definir manualmente").
+
+No **Planejamento**: mude títulos e instruções, mude a ordem, gere uma página por vez ("Gerar novamente" em cada uma) ou todas de uma vez.
+No quadro **Capa, contracapa e imagens**: pedido pronto da imagem da capa (com a sua foto como personagem, se quiser), contracapa escrita pela IA (frase de destaque e texto) e a lista de todas as imagens que faltam, com "Pedir imagem" e "Enviar" em cada uma.
+A contracapa é a última folha e também pode ser editada em **Capa e estilo > Contracapa**.
 No semiautomático (grátis), o "de uma vez" vai de 4 em 4 páginas, para a resposta da IA não ser cortada. O plano fica salvo junto com a apostila.
+Também existe um modelo pronto "Revista de estudo (EBD)" em **Nova**.
 
 ## Ativar (uma vez só), no console do Firebase
 Console: https://console.firebase.google.com/project/criador-apostilas-leo
@@ -57,6 +61,28 @@ ANTHROPIC_EFFORT=low
 ```
 Depois rode `firebase deploy --only functions` de novo.
 Acompanhe os gastos em console.anthropic.com e cobre os créditos de forma a cobrir esse custo.
+
+## Vender créditos
+**1 crédito = 1 apostila completa**: o planejamento, todas as páginas, os "gerar novamente" e a contracapa,
+até 40 pedidos à IA. O cliente vê o saldo no menu lateral (☰) e o botão **Gerar apostila completa · 1 crédito**.
+As imagens continuam grátis, com os prompts para o ChatGPT ou o Gemini.
+
+Para ligar:
+1. Faça os 3 passos de "Ligar o modo automático (IA)" acima.
+2. Em `app/config.js`:
+   - preencha `pix` (chave, nome e cidade). Sem a chave, "Comprar créditos" só abre o seu WhatsApp;
+   - confira `pacotes` (quantidade e preço) e `whatsapp` (o número que recebe os comprovantes);
+   - mude `modoAutomatico` para `true`.
+3. Publique: `firebase deploy --only functions,hosting`.
+
+Quando alguém compra:
+1. O cliente escolhe o pacote, paga pelo QR Code ou pelo Pix copia e cola e toca em **Já paguei: enviar comprovante**.
+   A mensagem chega no seu WhatsApp com o pacote e o usuário dele.
+2. Confira o Pix no app do banco.
+3. Abra **Painel admin**, toque em **Créditos** no cliente e use +5, +10 ou +30. O saldo muda na hora na tela dele.
+
+Cada cliente novo ganha `creditosIniciais` créditos de presente para testar (o padrão é 1).
+Antes de definir o preço, gere algumas apostilas e veja o custo real em Functions > Registros ("uso da IA") e em console.anthropic.com.
 
 ## Publicar uma mudança no app
 ```
