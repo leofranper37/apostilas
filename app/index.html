@@ -209,7 +209,7 @@ h3.sec:first-child{margin-top:0}
 .tipos-ap input{position:absolute;opacity:0;pointer-events:none}
 .tipos-ap .em{font-size:28px;line-height:1}
 @media (max-width:640px){.tipos-ap{grid-template-columns:repeat(3,1fr)}}
-.tipos-ap.modelos-ap{grid-template-columns:repeat(3,1fr)}
+.tipos-ap.modelos-ap{grid-template-columns:repeat(2,1fr)}.pl-mini{display:block;width:120px;border-radius:6px;box-shadow:0 0 0 1px var(--line,#e3e6ea);margin:8px 0}
 .modelos-ap small{display:block;font-weight:400;color:var(--muted);font-size:12px;line-height:1.3}
 @media (max-width:640px){.tipos-ap.modelos-ap{grid-template-columns:1fr}.modelos-ap label{flex-direction:row;text-align:left;flex-wrap:wrap;column-gap:10px}.modelos-ap small{flex-basis:100%;padding-left:38px}}
 .plano{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
@@ -588,6 +588,12 @@ body.demo .area{height:auto}
 .ap-fig.total{width:auto!important;margin-left:-64px;margin-right:-64px}
 .ap-fig.total img{border-radius:0}
 .ap-fig.total figcaption{padding:0 64px}
+.ap-pagimg{clear:both;height:1002px;margin:0 -40px;display:flex;align-items:center;justify-content:center}
+.ap-pagimg img{max-width:100%;max-height:100%;display:block;box-shadow:0 0 0 1px #e3e6ea}
+.ap-pagimg .ph{border:2px dashed #c9ced6;border-radius:10px;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#8a919c;font:15px/1.4 "Figtree",sans-serif;text-align:center;padding:30px}
+.ap-pagimg .ph b{color:#3b4250;font-size:18px}
+.exportando .ap-pagimg.vazia{display:none}
+.exportando .ap-pagimg img{box-shadow:none}
 .ap-b-nenhuma img{border-radius:0}
 .ap-b-arred img{border-radius:14px}
 .ap-b-moldura img{border:7px solid #fff;box-shadow:0 0 0 1px #d6dae0,0 6px 16px rgba(0,0,0,.12);border-radius:2px;box-sizing:border-box}
@@ -930,6 +936,7 @@ const TIPOS = {
   aberta:   {nome:'Questão aberta', desc:'Com linhas para responder', cor:'#d9622b', novo:()=>({enunciado:'', linhas:4, resposta:''})},
   multipla: {nome:'Múltipla escolha', desc:'Alternativas a, b, c…', cor:'#d9622b', novo:()=>({enunciado:'', alternativas:'*Alternativa correta\nAlternativa\nAlternativa\nAlternativa'})},
   vf:       {nome:'Verdadeiro ou falso', desc:'Afirmações para julgar', cor:'#d9622b', novo:()=>({enunciado:'Marque V para verdadeiro e F para falso.', itens:'V: Afirmação verdadeira\nF: Afirmação falsa'})},
+  folha:    {nome:'Página ilustrada', desc:'Uma folha inteira feita como imagem (ChatGPT ou Gemini)', cor:'#6d6fe8', novo:()=>({src:'', titulo:'', texto:''})},
   quebra:   {nome:'Quebra de página', desc:'Começa uma nova folha', cor:'#9aa1ac', novo:()=>({})},
 };
 
@@ -1327,6 +1334,7 @@ function renderDoc(s){
       case 'vf': { q++; const its = linhas(b.itens).map(l=>{ const m=l.match(/^([VFvf])\s*[:\-)]\s*(.*)$/); return m?{v:m[1].toUpperCase(),t:m[2]}:{v:'',t:l}; });
         corpo += `<div class="ap-q ap-bloco"><div class="ap-q-n">Questão ${q}</div><div class="ap-q-enun">${paras(b.enunciado)}</div><ul class="ap-vf">${its.map(i=>`<li><span class="p">(&nbsp;&nbsp;&nbsp;)</span><span>${fmt(i.t)}</span></li>`).join('')}</ul></div>`;
         if (its.some(i=>i.v)) gab.push([q, its.map(i=>i.v||'?').join(', ')]); break; }
+      case 'folha': corpo += `<figure class="ap-pagimg ap-bloco ${b.src?'':'vazia'}">${b.src?`<img src="${b.src}" alt="${esc(b.titulo||'Página ilustrada')}">`:`<div class="ph"><b>${esc(b.titulo||'Página ilustrada')}</b>Envie a imagem desta página: no Planejamento, clique em “Gerar esta página”.</div>`}</figure>`; break;
       case 'quebra': corpo += `<div class="ap-quebra html2pdf__page-break"></div>`; break;
     }
   }
@@ -1364,9 +1372,9 @@ const sel = (b,f,rot,ops) => `<div class="campo"><label for="i-${b.id}-${f}">${r
 const faixa = (b,f,rot,min,max) => `<div class="campo"><label for="i-${b.id}-${f}" data-rot="${rot}">${rot}: ${b[f]}%</label><input type="range" min="${min}" max="${max}" step="5" id="i-${b.id}-${f}" data-id="${b.id}" data-f="${f}" value="${b[f]}"></div>`;
 const POSICOES = [['centro','Centralizada'],['esq','À esquerda, texto contorna'],['dir','À direita, texto contorna'],['total','Largura total da folha']];
 const BORDAS = [['arred','Cantos arredondados'],['nenhuma','Cantos retos'],['moldura','Moldura com sombra'],['circulo','Círculo']];
-function seletorImg(alvo, src, sugestao){
+function seletorImg(alvo, src, sugestao, semSVG){
   const id = 'f-' + alvo.replace(/:/g,'-');
-  const botaoIA = alvo!=='capa' ? `<button class="btn peq ia" data-ilustrar="${alvo}">✦ Ilustrar com IA</button>` : '';
+  const botaoIA = alvo!=='capa' && !semSVG ? `<button class="btn peq ia" data-ilustrar="${alvo}">✦ Ilustrar com IA</button>` : '';
   return `<div class="img-alvo" data-drop="${alvo}">${src?`<img class="thumb" src="${src}" alt="">`:'<div class="vz" aria-hidden="true">＋</div>'}
   <div class="img-btns"><div class="fila"><label class="btn peq ${src?'':'pri'}" for="${id}">${src?'Trocar':'Escolher imagem'}</label><input type="file" accept="image/*" id="${id}" data-img="${alvo}" hidden>
   ${src?`<button class="btn peq" data-rot="${alvo}" title="Girar 90°">Girar ↻</button><button class="btn peq perigo" data-rem="${alvo}">Remover</button>`:`<button class="btn peq ia" data-gerarimg="${alvo}">🎨 Gerar imagem grátis</button>${botaoIA}`}</div>
@@ -1391,6 +1399,7 @@ function campos(b){
     case 'texto': return area(b,'texto','Texto','Escreva o conteúdo…',DICA_FMT);
     case 'lista': return area(b,'itens','Itens','Um item por linha','Um item por linha.') + `<label class="chk"><input type="checkbox" data-id="${b.id}" data-f="numerada" ${b.numerada?'checked':''}> Lista numerada</label>`;
     case 'destaque': return `<div class="linha2"><div class="campo"><label for="i-${b.id}-estilo">Tipo</label><select id="i-${b.id}-estilo" data-id="${b.id}" data-f="estilo">${BOXES.map(([v,n])=>`<option value="${v}" ${b.estilo===v?'selected':''}>${n}</option>`).join('')}</select></div>${inp(b,'titulo','Título da caixa')}</div>` + area(b,'texto','Texto','',DICA_FMT);
+    case 'folha': return seletorImg('b:'+b.id, b.src, '', true) + inp(b,'titulo','Título da página') + area(b,'texto','Tópicos da página','Um por linha','Usados no pedido da imagem. Um tópico por linha.');
     case 'imagem': return seletorImg('b:'+b.id, b.src, b.sugestao) + `<div class="linha2">${sel(b,'posicao','Posição',POSICOES)}${sel(b,'borda','Acabamento',BORDAS)}</div>` + ((b.posicao||'centro')==='total'?'':faixa(b,'largura','Largura',15,100)) + inp(b,'legenda','Legenda','Ex.: Mapa do Brasil');
     case 'imgtexto': return seletorImg('b:'+b.id, b.src, b.sugestao) + `<div class="linha2">${sel(b,'lado','Imagem à',[['esq','Esquerda'],['dir','Direita']])}${sel(b,'borda','Acabamento',BORDAS)}</div>` + faixa(b,'largura','Largura da imagem',20,60) + inp(b,'legenda','Legenda') + area(b,'texto','Texto ao lado','',DICA_FMT);
     case 'galeria': return `<div class="linha2">${sel(b,'colunas','Colunas',[['2','2 por linha'],['3','3 por linha'],['4','4 por linha']])}${sel(b,'borda','Acabamento',BORDAS)}</div>` +
@@ -1450,12 +1459,12 @@ document.addEventListener('input', e=>{
 /* ---------- Imagens ---------- */
 const carregarImg = src => new Promise((ok, err)=>{ const i = new Image(); i.onload = ()=>ok(i); i.onerror = err; i.src = src; });
 const lerArquivo = f => new Promise((ok, err)=>{ const r = new FileReader(); r.onload = ()=>ok(r.result); r.onerror = err; r.readAsDataURL(f); });
-async function prepararImagem(file){
+async function prepararImagem(file, max = 1600){
   if (!file || !/^image\//.test(file.type)) throw new Error('tipo');
   const url = await lerArquivo(file);
   if (file.type==='image/svg+xml' || (/png|gif|webp/.test(file.type) && file.size < 350000)) return url; // mantém transparência das ilustrações pequenas
   const img = await carregarImg(url);
-  const max = 1600, k = Math.min(1, max/Math.max(img.width, img.height));
+  const k = Math.min(1, max/Math.max(img.width, img.height));
   const cv = document.createElement('canvas'); cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
   const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(img,0,0,cv.width,cv.height);
   return cv.toDataURL('image/jpeg', .86);
@@ -1476,8 +1485,9 @@ function alvo(t){
   return {get:()=>b.src, set:v=>{ b.src = v; }};
 }
 function aplicarImg(t, src){ const a = alvo(t); if (!a) return; a.set(src); salvarLocal(); if (a.capa) renderCapa(); renderEditor(); }
+const ehFolha = t => { const b = t && t.startsWith('b:') && st.blocos.find(x=>x.id===t.slice(2)); return !!b && b.tipo==='folha'; };
 async function arquivoParaAlvo(t, file){
-  try { aplicarImg(t, await prepararImagem(file)); }
+  try { aplicarImg(t, await prepararImagem(file, ehFolha(t) ? 2400 : 1600)); }
   catch(e){ aviso('Não foi possível ler essa imagem. Tente um arquivo JPG ou PNG.'); }
 }
 async function novaImagemBloco(file, pos){
@@ -1629,8 +1639,44 @@ function paginar(box){
   });
 }
 
+// Apostila só de páginas ilustradas: cada imagem ocupa a folha A4 inteira, sem margens
+async function pdfFolhas(folhas){
+  const bt = $('#b-pdf'); bt.disabled = true; bt.textContent = 'Gerando PDF…';
+  const d = renderDoc(st);
+  const fora = document.createElement('div'); fora.style.cssText = 'position:fixed;left:-10000px;top:0'; document.body.appendChild(fora);
+  const foto = async html => {
+    const box = document.createElement('div'); box.className = 'exportando'; box.style.width = '210mm'; box.innerHTML = html; fora.appendChild(box);
+    box.querySelectorAll('.ap-capa').forEach(x=>{ x.style.height = '1123px'; });
+    await Promise.all([...box.querySelectorAll('img')].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+    const url = await html2pdf().set({margin:0, image:{type:'jpeg', quality:.95}, html2canvas:{scale:2, backgroundColor:'#ffffff'}}).from(box).outputImg('datauristring');
+    box.remove(); return url;
+  };
+  try {
+    await document.fonts.ready;
+    const pdf = await html2pdf().set({margin:0, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'}}).from('<div style="height:20px"></div>').toPdf().get('pdf');
+    const pagina = async src => {
+      const im = await carregarImg(src); let url = src, tipo = /^data:image\/png/.test(src) ? 'PNG' : 'JPEG';
+      if (!/^data:image\/(png|jpe?g)/.test(src)){ const cv = document.createElement('canvas'); cv.width = im.naturalWidth || 1240; cv.height = im.naturalHeight || 1754;
+        const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(im, 0, 0, cv.width, cv.height); url = cv.toDataURL('image/jpeg', .92); tipo = 'JPEG'; }
+      const W = im.naturalWidth || im.width, H = im.naturalHeight || im.height, k = Math.min(210/W, 297/H), w = W*k, h = H*k;
+      pdf.addPage('a4', 'portrait'); pdf.addImage(url, tipo, (210-w)/2, (297-h)/2, w, h);
+    };
+    if (d.capa) await pagina(await foto(d.capa));
+    for (const b of folhas) if (b.src) await pagina(b.src);
+    if (d.contra) await pagina(await foto(d.contra));
+    pdf.deletePage(1);
+    if (await salvarArquivo(nomeBase()+'.pdf', pdf.output('blob'))) contar('pdfs');
+  } catch(e){ aviso('Não consegui gerar o PDF. Tente “Baixar HTML” e imprimir como PDF.'); }
+  finally { fora.remove(); bt.disabled = false; bt.textContent = 'Baixar PDF'; }
+}
+
 $('#b-pdf').onclick = async ()=>{
   if (typeof html2pdf === 'undefined'){ aviso('O gerador de PDF não carregou. Use “Baixar HTML” e imprima como PDF.'); return; }
+  const folhas = st.blocos.filter(b=>b.tipo!=='quebra');
+  if (folhas.length && folhas.every(b=>b.tipo==='folha')){
+    if (!folhas.some(b=>b.src)){ aviso('Ainda não há nenhuma página ilustrada. No Planejamento, clique em “Gerar esta página”.'); return; }
+    return pdfFolhas(folhas);
+  }
   const bt = $('#b-pdf'); bt.disabled = true; bt.textContent = 'Gerando PDF…';
   const d = renderDoc(st);
   // A posição fora da tela fica numa caixa externa: o html2pdf copia o estilo do elemento que recebe, e com left:-10000px o PDF saía em branco
@@ -1837,7 +1883,9 @@ const MODELOS_AP = {
   estudo:{em:'📰', nome:'Revista de estudo', desc:'Texto corrido, citações e quadros “Discuta”, como as revistas de EBD', fonte:'revista', cor:'#1f5f82'},
   visual:{em:'🖼️', nome:'Revista visual', desc:'Abertura com imagem grande, cartões, “Lembre-se” e faixa', fonte:'', cor:''},
   didatico:{em:'📝', nome:'Apostila didática', desc:'Títulos numerados, caixas de dica e atividades com gabarito', fonte:'', cor:''},
+  ilustrada:{em:'🎨', nome:'Página ilustrada', desc:'Cada página sai pronta como uma imagem, estilo infográfico, feita no ChatGPT ou no Gemini', fonte:'', cor:''},
 };
+const ilustrada = P => !!P && P.modelo==='ilustrada';
 const BASE_MAX = 5000;   // material do professor que vai em cada pedido (o servidor aceita até 12 mil caracteres)
 const baseAp = P => { const b = String(P.base||'').trim(); return b ? `\nMaterial de base do professor (use como fonte principal: mantenha as ideias, a ordem e as referências dele; complete e explique melhor, sem contradizer):\n"""\n${b.slice(0, BASE_MAX)}\n"""` : ''; };
 const modeloDe = P => MODELOS_AP[P.modelo] ? P.modelo : 'visual';
@@ -1854,7 +1902,7 @@ ${perfilAp(f)}
 ${estrutura}
 ${f.obs ? 'Observações: '+f.obs : ''}${baseAp(f)}
 Cada página deve caber em cerca de uma folha A4 e seguir uma ordem lógica, sem repetir assuntos.
-Para cada página, dê um título curto e instruções concretas do que ela deve ter (ideia central, textos bíblicos ou exemplos, e a imagem principal, se houver).
+${m==='ilustrada' ? 'Cada página vai virar uma página ilustrada (estilo infográfico, com título, seções numeradas, ícones e quadros de destaque). Para cada página, dê um título curto e, em "instrucoes", de 4 a 6 tópicos curtos que ela vai desenvolver, um por linha (separados por \\n), com as referências bíblicas ou exemplos entre parênteses quando houver.' : 'Para cada página, dê um título curto e instruções concretas do que ela deve ter (ideia central, textos bíblicos ou exemplos, e a imagem principal, se houver).'}
 Escreva tudo em ${f.idioma}. Responda SOMENTE com JSON válido (sem texto antes ou depois) neste formato:
 {"titulo":"título da apostila","subtitulo":"frase curta","paginas":[{"titulo":"...","instrucoes":"..."}]}`;
 }
@@ -1916,6 +1964,75 @@ Responda SOMENTE com JSON válido (sem texto antes ou depois) neste formato, com
 ${ESQ_BLOCOS}`;
 }
 
+// Página ilustrada: pedido de UMA imagem com a página inteira pronta (texto, ícones e ilustrações)
+function promptFolha(P, p){
+  const i = P.paginas.indexOf(p), n = P.paginas.length, t = TIPOS_AP[P.tipo] || TIPOS_AP.escolar;
+  const est = ESTILOS_IMG.find(x=>x[0]===P.est) || ESTILOS_IMG.find(x=>x[0]==='infografico');
+  const cor = P.cor ? `${(CORES.find(x=>x[0]===P.cor)||[,''])[1]} (${P.cor})` : '';
+  const top = linhas(p.instr), rotulo = [P.titulo || P.tema, t.nome].filter(Boolean).join(' · ').toUpperCase();
+  const nv = NIVEIS.find(x=>x[0]===P.nivel), e = ESCRITAS.find(x=>x[0]===P.escrita), refs = String(P.refs||'').trim();
+  return `Crie UMA imagem vertical que seja uma página inteira de apostila, pronta para imprimir em folha A4 (retrato; se não houver a proporção A4, use 2:3).
+É a página ${i+1} de ${n} da apostila “${P.titulo || P.tema}”, sobre ${P.tema}${P.publico ? `, para ${P.publico}` : ''}.
+
+TÍTULO DA PÁGINA (letras grandes, no alto): “${p.titulo}”
+${top.length > 1 ? `TÓPICOS (uma seção numerada para cada um, com subtítulo em caixa alta e 2 ou 3 frases curtas explicando):\n${top.map((x,k)=>`${k+1}. ${x}`).join('\n')}` : top.length ? `O QUE A PÁGINA DEVE EXPLICAR: ${top[0]}\nDivida em 3 a 5 seções numeradas, com subtítulo em caixa alta e 2 ou 3 frases curtas em cada uma.` : 'Divida o assunto em 3 a 5 seções numeradas, com subtítulo em caixa alta e 2 ou 3 frases curtas em cada uma.'}
+
+ORGANIZAÇÃO DA PÁGINA:
+- Faixa fina no topo: à esquerda “${rotulo}”, à direita “PÁGINA ${i+1} DE ${n}”.
+- Título grande e, logo abaixo, um parágrafo curto de introdução, com uma ilustração principal ao lado.
+- As seções numeradas, cada uma com um ícone ou uma pequena ilustração.
+- Na parte de baixo, 2 ou 3 quadros coloridos: “Destaque” (a ideia principal), “Curiosidade” e “Resumo” (3 ou 4 itens).
+- Uma linha de rodapé com uma frase curta de fechamento.
+
+TEXTO: tudo em ${P.idioma || 'português do Brasil'}, com ortografia e acentos corretos, letras nítidas e grandes o bastante para ler impresso. Tom do texto: ${e ? e[2].split(',')[0] : 'claro e acolhedor'}${nv ? `; nível ${nv[1].toLowerCase()}` : ''}.${P.tipo==='biblica' ? ` Cite os textos bíblicos com livro, capítulo e versículo${refs ? ` (base: ${refs})` : ''}.` : refs ? ` Fontes indicadas: ${refs}.` : ''} Não invente citações de autores.${P.objetivo ? `\nObjetivo do material: ${P.objetivo}.` : ''}
+VISUAL: ilustrações e ícones no estilo ${est[2]}; ${cor ? `cor principal ${cor} com tons claros dela` : 'paleta harmoniosa de 2 ou 3 cores'}; fundo branco ou bem claro; margens livres de cerca de 1 cm; visual de revista didática profissional, organizado e fácil de ler. Sem marca d’água e sem logotipos.${P.pers ? `\nPERSONAGEM: use a pessoa da foto que estou enviando junto com este pedido (${P.pers}) na ilustração principal, mantendo o rosto e as características dela.` : ''}${P.obs ? `\nObservações: ${P.obs}` : ''}`;
+}
+// coloca (ou troca) a imagem de uma página ilustrada
+function colocarFolha(p, src){
+  const b = st.blocos.find(x=>x.pag===p.id && x.tipo==='folha');
+  if (b){ Object.assign(b, {src, titulo:p.titulo, texto:p.instr}); salvarLocal(); renderEditor(); return; }
+  inserirPagina(p, [{id:uid(), tipo:'folha', src, titulo:p.titulo, texto:p.instr}]);
+}
+// Página ilustrada, passo a passo: copiar o pedido, gerar no ChatGPT ou no Gemini e enviar a imagem
+function folhaPassos(el, P, p, pronto, usar = src => colocarFolha(p, src)){
+  const fid = 'fp-' + p.id;
+  el.innerHTML = `<div class="passos">
+    <div class="passo"><span class="pn">1</span><div><b>Copie o pedido da imagem</b><p>O pedido já tem o título, os tópicos, as cores e o estilo desta página.</p><button class="btn ia" data-fp="copiar">Copiar pedido</button><div data-fp="m1"></div></div></div>
+    <div class="passo"><span class="pn">2</span><div><b>Cole no ChatGPT ou no Gemini e espere a imagem</b><p>Numa conversa nova, cole com Ctrl+V e envie${P.pers ? ' junto com a sua foto (botão + ou clipe)' : ''}. Quando a imagem aparecer, baixe ou copie.</p><div class="pl-acoes"><a class="btn peq" href="https://chatgpt.com/" target="_blank" rel="noopener">Abrir ChatGPT</a><a class="btn peq" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini</a></div></div></div>
+    <div class="passo"><span class="pn">3</span><div><b>Envie a imagem para cá</b><p>Escolha o arquivo baixado ou cole a imagem aqui com Ctrl+V. Se houver letras erradas, peça na mesma conversa: “corrija a palavra …”.</p><label class="btn pri" for="${fid}">Enviar a imagem</label><input type="file" accept="image/*" id="${fid}" hidden><div data-fp="m3"></div></div></div>
+  </div>`;
+  const q = s => el.querySelector(`[data-fp="${s}"]`);
+  const receber = async f => {
+    if (!f) return;
+    try { usar(await prepararImagem(f, 2400)); }
+    catch(_){ erroEm(q('m3'), 'Não consegui ler essa imagem. Tente um arquivo JPG ou PNG.'); return; }
+    document.removeEventListener('paste', colar, true); pronto();
+  };
+  const colar = e => { if (!el.isConnected){ document.removeEventListener('paste', colar, true); return; }
+    const it = [...(e.clipboardData && e.clipboardData.items || [])].find(x=>x.type.startsWith('image/')); if (!it) return;
+    e.preventDefault(); e.stopImmediatePropagation(); receber(it.getAsFile()); };
+  document.addEventListener('paste', colar, true);
+  el.querySelector('#'+fid).onchange = e => receber(e.target.files[0]);
+  q('copiar').onclick = async () => {
+    const t = promptFolha(P, p);
+    try { await navigator.clipboard.writeText(t); q('copiar').textContent = '✓ Pedido copiado (copiar de novo)'; q('m1').innerHTML = ''; }
+    catch(_){ q('m1').innerHTML = `<textarea rows="4" readonly aria-label="Pedido para copiar">${esc(t)}</textarea><p class="dica-campo" style="margin:4px 0 0">Selecione o texto acima e copie com Ctrl+C.</p>`; q('m1').querySelector('textarea').select(); }
+  };
+  q('copiar').click();
+  requestAnimationFrame(()=>el.scrollIntoView({block:'nearest', behavior:'smooth'}));
+}
+// abre o passo a passo de uma página ilustrada fora do planejamento (editor e lista de imagens)
+function abrirFolha(b, voltar){
+  const P0 = st.plano, p0 = P0 && b.pag && P0.paginas.find(x=>x.id===b.pag);
+  const p = p0 || {id:b.id, titulo:b.titulo || st.capa.titulo, instr:b.texto || ''};
+  const P = p0 ? P0 : {tema:st.capa.titulo, titulo:st.capa.titulo, tipo:'escolar', idioma:IDIOMAS[0], est:'infografico', paginas:[p]};
+  modal(`<h2>Página ilustrada: ${esc(p.titulo || 'sem título')}</h2><div id="fa-passos"></div>
+  <div class="modal-acoes">${voltar ? '<button class="btn" id="fa-voltar">← Voltar</button>' : '<button class="btn" data-fechar>Fechar</button>'}</div>`);
+  if (voltar) $('#fa-voltar').onclick = voltar;
+  folhaPassos($('#fa-passos'), P, p, () => { aviso('Página ilustrada recebida.'); voltar ? voltar() : fecharModal(); },
+    p0 ? undefined : src => aplicarImg('b:'+b.id, src));   // bloco solto, fora do plano: a imagem vai direto para ele
+}
+
 // cada página começa numa folha nova: uma quebra antes de cada grupo, menos no começo da apostila
 function ajustarQuebras(){
   const B = st.blocos;
@@ -1930,6 +2047,9 @@ function ajustarQuebras(){
 function colocarPagina(p, r){
   const bl = normalizar(r && r.blocos).filter(b=>b.tipo!=='quebra');
   if (!bl.length) throw new Error('vazio');
+  inserirPagina(p, bl);
+}
+function inserirPagina(p, bl){
   bl.forEach(b=>b.pag = p.id);
   const P = st.plano;
   let pos = st.blocos.findIndex(b=>b.pag===p.id);
@@ -1949,6 +2069,7 @@ function iniciarPlano(f, paginas, titulo, subtitulo, id){
   capa.contracapa = true; capa.contraTexto = ''; capa.contraFrase = ''; capa.contraFonte = ''; capa.contraImagem = '';
   st = {capa, blocos:[], id:id || novoId(), plano:{...f, titulo:capa.titulo, subtitulo:capa.subtitulo, paginas: paginas.map(x=>({id:uid(), titulo:String(x.titulo||'').trim(), instr:String(x.instr||x.instrucoes||'').trim()}))}};
   if (f.est && f.est!=='nenhuma') abrirGerarImagem.est = f.est;
+  if (ilustrada(st.plano)){ st.capa.numeros = false; if (!f.est || f.est==='nenhuma') st.plano.est = 'infografico'; }
   contar('apostilas'); salvarLocal(); renderCapa(); renderEditor(); aba('cont'); vista('editar');
 }
 function paginasPadrao(f){
@@ -2167,11 +2288,11 @@ function desenharPlano(){
   const P = st.plano; if (!iaDisp) modoIA = 'semi';
   const t = TIPOS_AP[P.tipo] || TIPOS_AP.escolar, rol = $('#modal-caixa').scrollTop, mesmo = !$('#modal').hidden && $('#modal-caixa .plano');
   const feitas = P.paginas.filter(p=>pagDe(p).length).length, pend = P.paginas.filter(p=>!pagDe(p).length);
-  const semi = modoIA!=='auto', cr = creditosIA();
+  const semi = modoIA!=='auto', cr = creditosIA(), il = ilustrada(P), imgSemi = il;
   modal(`<h2>Planejamento da apostila</h2>
   ${abasModo()}
   <p class="sub"><b>${esc(P.titulo||P.tema)}</b> · ${t.em} ${t.nome} · ${MODELOS_AP[modeloDe(P)].em} ${MODELOS_AP[modeloDe(P)].nome} · ${esc(P.idioma)} · <b>${feitas} de ${P.paginas.length}</b> páginas prontas. A capa já está feita: mude o que quiser em “Capa e estilo”.
-  ${semi ? 'Em cada página: clique em “Copiar pedido”, cole na sua IA (grátis) e cole a resposta de volta.' : custoTexto()}</p>
+  ${il ? 'Cada página sai pronta como uma imagem: em cada uma, clique em “Gerar esta página”, cole o pedido no ChatGPT ou no Gemini (grátis) e envie a imagem para cá.' : semi ? 'Em cada página: clique em “Copiar pedido”, cole na sua IA (grátis) e cole a resposta de volta.' : custoTexto()}</p>
   <div class="gerar-ia" style="margin:0 0 14px"><b>Capa, contracapa e imagens ✦</b><p>Peça à IA a imagem da capa (pode usar a sua foto como personagem), o texto e a imagem da contracapa e as ilustrações de cada página.</p><div class="pl-acoes"><button class="btn peq ia" id="ga-capa">🖼️ Imagem da capa</button><button class="btn peq ia" id="ga-contra">📘 Contracapa</button><button class="btn peq ia" id="ga-ilus">🎨 Todas as imagens (${lugaresDeImagem().filter(x=>!x.src).length} faltando)</button></div></div>
   <ol class="plano">${P.paginas.map((p,i)=>{ const ok = pagDe(p).length > 0; return `<li data-pid="${p.id}" class="${ok?'ok':''}">
     <div class="pl-cab"><span class="n">${i+1}</span><input type="text" data-pc="titulo" value="${esc(p.titulo)}" aria-label="Título da página ${i+1}" placeholder="Título da página">
@@ -2179,15 +2300,16 @@ function desenharPlano(){
       <button class="ic" data-pa="sobe" ${i===0?'disabled':''} aria-label="Mover para cima" title="Mover para cima">↑</button>
       <button class="ic" data-pa="desce" ${i===P.paginas.length-1?'disabled':''} aria-label="Mover para baixo" title="Mover para baixo">↓</button>
       <button class="ic" data-pa="tira" aria-label="Tirar do plano" title="Tirar do plano">✕</button></div>
-    <label class="pl-rot" for="pi-${p.id}">Instruções para esta página</label>
-    <textarea id="pi-${p.id}" data-pc="instr" rows="2" placeholder="Opcional: o que explicar, exemplos e a imagem principal desta página">${esc(p.instr)}</textarea>
-    <div class="pl-acoes"><button class="btn peq ${ok?'':'ia'}" data-pa="gerar">${semi ? (ok?'↻ Copiar pedido de novo':'1. Copiar pedido') : (ok?'↻ Gerar novamente':'✦ Gerar esta página')}</button>${ok?'<button class="btn peq" data-pa="ver">Ver na apostila</button>':''}</div>
+    <label class="pl-rot" for="pi-${p.id}">${il ? 'Tópicos desta página (um por linha)' : 'Instruções para esta página'}</label>
+    <textarea id="pi-${p.id}" data-pc="instr" rows="${il?4:2}" placeholder="${il ? 'Um tópico por linha. Ex.:&#10;O que é a membresia (At 2.41-47)&#10;Por que fazer parte de uma igreja local' : 'Opcional: o que explicar, exemplos e a imagem principal desta página'}">${esc(p.instr)}</textarea>
+    ${il && ok && pagDe(p)[0].src ? `<img class="pl-mini" src="${pagDe(p)[0].src}" alt="Página ${i+1} pronta">` : ''}
+    <div class="pl-acoes"><button class="btn peq ${ok?'':'ia'}" data-pa="gerar">${imgSemi ? (ok?'↻ Gerar novamente':'🎨 Gerar esta página') : semi ? (ok?'↻ Copiar pedido de novo':'1. Copiar pedido') : (ok?'↻ Gerar novamente':'✦ Gerar esta página')}</button>${ok?'<button class="btn peq" data-pa="ver">Ver na apostila</button>':''}</div>
     <div class="pl-semi"></div>
   </li>`; }).join('')}</ol>
   <button class="btn peq" id="ga-add">+ Adicionar página</button>
   <div id="ga-semi"></div><div id="ga-status"></div>
   <div class="modal-acoes"><button class="btn" id="ga-novo">Começar outra apostila</button><button class="btn" data-fechar>Fechar</button>
-  ${pend.length ? `<button class="btn ia" id="ga-lote">${semi ? `Copiar pedido de ${pend.length>LOTE_SEMI ? `${LOTE_SEMI} páginas` : pend.length===1 ? '1 página' : `${pend.length} páginas`} de uma vez` : `✨ ${feitas ? 'Gerar as que faltam' : 'Gerar apostila completa'} (${pend.length} ${pend.length===1?'página':'páginas'})${cobraCredito() && !apostilaPaga() ? ' <span class="selo">✦ 1 crédito</span>' : ''}`}</button>` : ''}</div>`, true);
+  ${pend.length ? `<button class="btn ia" id="ga-lote">${imgSemi ? `🎨 Gerar a próxima página (${pend.length===1?'falta 1':`faltam ${pend.length}`})` : semi ? `Copiar pedido de ${pend.length>LOTE_SEMI ? `${LOTE_SEMI} páginas` : pend.length===1 ? '1 página' : `${pend.length} páginas`} de uma vez` : `✨ ${feitas ? 'Gerar as que faltam' : 'Gerar apostila completa'} (${pend.length} ${pend.length===1?'página':'páginas'})${cobraCredito() && !apostilaPaga() ? ' <span class="selo">✦ 1 crédito</span>' : ''}`}</button>` : ''}</div>`, true);
   if (mesmo) $('#modal-caixa').scrollTop = rol;
   const lista = $('#modal-caixa .plano'), status = $('#ga-status');
   const pDe = el => P.paginas.find(p=>p.id===el.closest('[data-pid]').dataset.pid);
@@ -2203,6 +2325,7 @@ function desenharPlano(){
       requestAnimationFrame(()=>{ const el = document.querySelector(`[data-bi="${k}"]`); if (el) el.scrollIntoView({block:'start'}); }); }
     else if (ac==='gerar'){
       if (!p.titulo.trim()){ li.querySelector('[data-pc=titulo]').focus(); return; }
+      if (imgSemi){ folhaPassos(caixa, P, p, () => { desenharPlano(); aviso(`Página ${P.paginas.indexOf(p)+1} colocada na apostila.`); }); return; }
       if (semi){
         semiPassos(caixa, {jaCopiar:true, pedido: () => promptPagina(P, p), botao:'Colocar na apostila', cortado:'Peça de novo numa conversa nova; se continuar cortando, escreva instruções mais curtas para esta página.',
           usar: r => { colocarPagina(p, r); desenharPlano(); aviso(`Página ${P.paginas.indexOf(p)+1} colocada na apostila.`); }});
@@ -2224,6 +2347,7 @@ function desenharPlano(){
   lote.onclick = async () => {
     const pend = P.paginas.filter(p=>!pagDe(p).length && p.titulo.trim());
     if (!pend.length){ erroEm(status, 'Dê um título para as páginas que faltam.'); return; }
+    if (imgSemi){ const bt = document.querySelector(`#modal-caixa [data-pid="${pend[0].id}"] [data-pa=gerar]`); if (bt) bt.click(); return; }
     if (semi){
       const grupo = pend.slice(0, LOTE_SEMI);
       status.innerHTML = `<p class="dica-campo" style="margin:8px 0 0;color:var(--ink)">Pedido das páginas <b>${grupo.map(p=>P.paginas.indexOf(p)+1).join(', ')}</b>${pend.length > grupo.length ? ` (de ${LOTE_SEMI} em ${LOTE_SEMI}, para a resposta não ser cortada; depois clique de novo para as próximas)` : ''}.</p>`;
@@ -2372,6 +2496,7 @@ function abrirGerarImagem(t, voltar){
   const capaOu = t==='capa' || t==='contra', P = st.plano || {};
   if (capaOu) sug = sugestaoCapa(t);
   else { const [, id] = t.split(':'); bl = st.blocos.find(x=>x.id===id); sug = (bl && (bl.sugestao || bl.legenda || bl.titulo)) || ''; }
+  if (bl && bl.tipo==='folha') return abrirFolha(bl, voltar);
   const formPad = capaOu || (bl && bl.tipo==='abertura') ? 'vertical' : bl && bl.tipo==='imgtexto' ? 'quadrado' : 'horizontal';
   const estPad = (ESTILOS_IMG.some(x=>x[0]===P.est) && P.est) || abrirGerarImagem.est || {infantil:'infantil', aquarela:'aquarela', biblico:'aquarela'}[st.capa.fonte] || 'aquarela';
   const fid = 'gi-' + t.replace(/:/g,'-');
@@ -2409,9 +2534,9 @@ function lugaresDeImagem(){
   const P = st.plano, L = [{t:'capa', nome:'Capa', src:st.capa.imagem}];
   if (st.capa.contracapa) L.push({t:'contra', nome:'Contracapa', src:st.capa.contraImagem});
   st.blocos.forEach(b=>{
-    if (!['imagem','imgtexto','abertura'].includes(b.tipo)) return;
+    if (!['imagem','imgtexto','abertura','folha'].includes(b.tipo)) return;
     const k = P && b.pag ? P.paginas.findIndex(p=>p.id===b.pag) : -1;
-    L.push({t:'b:'+b.id, nome:(k>=0 ? `Página ${k+1}` : 'Imagem') + ': ' + (b.sugestao || b.legenda || b.titulo || 'sem descrição'), src:b.src});
+    L.push({t:'b:'+b.id, nome:(k>=0 ? `Página ${k+1}` : 'Imagem') + ': ' + (b.tipo==='folha' ? 'página inteira · ' : '') + (b.sugestao || b.legenda || b.titulo || 'sem descrição'), src:b.src});
   });
   return L;
 }
@@ -2781,6 +2906,7 @@ function textoDaApostila(){
   return st.blocos.map(b => b.tipo==='titulo' || b.tipo==='subtitulo' ? '\n' + limpo(b.texto) + '\n'
     : ['texto','destaque','citacao','acao','epigrafe','cita','imgtexto'].includes(b.tipo) ? limpo(b.texto)
     : b.tipo==='abertura' ? limpo(b.titulo) + '\n' + limpo(b.texto)
+    : b.tipo==='folha' ? '\n' + limpo(b.titulo) + '\n' + linhas(b.texto).map(x=>'- ' + limpo(x)).join('\n')
     : ['lista','cartao','discuta'].includes(b.tipo) ? linhas(b.itens).map(x=>'- ' + limpo(x)).join('\n') : '').filter(Boolean).join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 6000);
 }
 function promptAtividade(a){
@@ -2929,6 +3055,7 @@ function renderAprender(){
 
 /* Novidades */
 const NOVIDADES = [
+  {id:'2026-11-06', data:'6 de novembro de 2026', titulo:'Página ilustrada', itens:['Novo modelo: cada página sai pronta como uma imagem, estilo infográfico', 'A IA divide o tema em páginas e tópicos, e você revisa antes', 'Pedido pronto para o ChatGPT ou o Gemini, grátis', 'PDF com as páginas na folha inteira']},
   {id:'2026-11-05', data:'5 de novembro de 2026', titulo:'Novo estúdio', itens:['Menu lateral com todas as ferramentas à mão', 'Página inicial: escreva o tema e comece na hora', 'Atividades e provas: 8 tipos de questão, com gabarito', 'Capas e imagens num lugar só', 'Minhas apostilas com as capas, busca e “Duplicar”', 'Tema escuro']},
   {id:'2026-11-04', data:'4 de novembro de 2026', titulo:'Créditos e apostila completa', itens:['Botão “Gerar apostila completa”: 1 crédito faz a apostila inteira', '“Gerar novamente” e a contracapa não gastam mais créditos', 'Compra de créditos por Pix']},
   {id:'2026-11-03', data:'3 de novembro de 2026', titulo:'Criador em 5 etapas', itens:['Conteúdo, profundidade, base bíblica, estilo e gerar', 'Capa e contracapa com ajuda da IA', 'Modelo “Revista de estudo”, no estilo das revistas de EBD']},

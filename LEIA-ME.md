@@ -23,6 +23,17 @@ A contracapa é a última folha e também pode ser editada em **Capa e estilo > 
 No semiautomático (grátis), o "de uma vez" vai de 4 em 4 páginas, para a resposta da IA não ser cortada. O plano fica salvo junto com a apostila.
 Também existe um modelo pronto "Revista de estudo (EBD)" em **Nova**.
 
+## Página ilustrada (cada página é uma imagem pronta)
+Na etapa 2, escolha o modelo **Página ilustrada**. A IA planeja as páginas e os **tópicos de cada uma** (um por linha), e você revisa.
+Depois, em cada página, toque em **Gerar esta página**:
+1. o app copia o pedido da imagem, com o título, os tópicos, "Página X de N", as cores e o estilo;
+2. cole no ChatGPT ou no Gemini (grátis) e espere a imagem;
+3. toque em **Enviar a imagem**, ou cole com Ctrl+V.
+
+O botão **Gerar a próxima página** vai para a próxima que falta. **Gerar novamente** troca a imagem.
+No PDF, cada página ocupa a folha A4 inteira, com a capa e a contracapa.
+Se a IA errar uma palavra na imagem, peça na mesma conversa: "corrija a palavra …".
+
 ## Ativar (uma vez só), no console do Firebase
 Console: https://console.firebase.google.com/project/criador-apostilas-leo
 
