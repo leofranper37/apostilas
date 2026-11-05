@@ -1,5 +1,5 @@
 // Service worker: deixa o app abrir rápido e funcionar mesmo sem internet
-const VERSAO = 'apostilas-v11';
+const VERSAO = 'apostilas-v12';
 const BASE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon.png'];
 
 self.addEventListener('install', e => {
@@ -29,7 +29,7 @@ self.addEventListener('fetch', e => {
   // Página: busca a versão nova primeiro; sem internet, usa a guardada
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request)
+      fetch(e.request, {cache: 'no-cache'})
         .then(r => { const c = r.clone(); caches.open(VERSAO).then(x => x.put('./index.html', c)); return r; })
         .catch(() => caches.match('./index.html'))
     );
