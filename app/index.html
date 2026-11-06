@@ -2358,7 +2358,7 @@ function desenharPlano(){
       } else {
         if (!podeGerar()){ erroEm(caixa, SEM_CREDITO); return; }
         bt.disabled = true; caixa.innerHTML = '<div class="carregando" style="margin-top:8px">Escrevendo esta página… isso pode levar alguns segundos.</div>';
-        try { colocarPagina(p, await iaJSON(promptPagina(P, p))); if (!$('#modal').hidden) desenharPlano(); aviso(`Página ${i+1} pronta.`); }
+        try { colocarPagina(p, await iaJSON(promptPagina(P, p))); caixa.innerHTML = '<div class="carregando" style="margin-top:8px">Desenhando as ilustrações desta página…</div>'; await desenharDaPagina(p); if (!$('#modal').hidden && st.plano===P) desenharPlano(); aviso(`Página ${i+1} pronta, com os desenhos.`); }
         catch(e2){ bt.disabled = false; erroEm(caixa, msgErroIA(e2)); }
       }
     }
@@ -2418,6 +2418,8 @@ function desenharPlano(){
           }
         }
         colocarPagina(p, r);
+        $('#ga-status').innerHTML = `<div class="carregando">Desenhando as ilustrações da página ${P.paginas.indexOf(p)+1}… não feche esta janela.</div>`;
+        await desenharDaPagina(p);
       }
       catch(e){ desenharPlano(); erroEm($('#ga-status'), `Parei na página ${P.paginas.indexOf(p)+1}. ${msgErroIA(e)} As páginas prontas ficaram na apostila.`); return; }
       if ($('#modal').hidden || st.plano !== P) return;   // fechou a janela ou trocou de apostila: para de gerar
@@ -2503,7 +2505,7 @@ function abrirIlustrar(t){
     if (!podeGerar()){ erro(SEM_CREDITO); return; }
     const bt = $('#il-ir'); bt.disabled = true; $('#il-status').innerHTML = '<div class="carregando">Desenhando… pode levar até um minuto.</div>';
     try {
-      const svg = await iaTexto(promptSVG(d, $('#il-est').value, t), 'complex');
+      const svg = await iaTexto(promptSVG(d, $('#il-est').value, t), 'complex', null, true);
       aplicarImg(t, limparSVG(svg)); fecharModal(); aviso('Ilustração adicionada. Se não gostar, clique em Remover e tente outra descrição.');
     } catch(e){
       bt.disabled = false;
@@ -2661,16 +2663,26 @@ const nCred = n => `${n} ${n===1?'crédito':'créditos'}`;
 // frase sobre o custo, para mostrar perto dos botões de gerar
 function custoTexto(){
   if (!cobraCredito()) return '';
-  return `Cada página gerada pela IA gasta <b>1 crédito</b> (gerar de novo também). O planejamento e a contracapa não gastam. Saldo: ${nCred(creditosIA())}.`;
+  return `Cada página completa (texto e desenhos) gasta <b>1 crédito</b>; gerar de novo também. O planejamento e a contracapa não gastam. Saldo: ${nCred(creditosIA())}.`;
 }
 
 async function iaJSON(p, id, extra = false){
   if (sample){ const r = await sample.json(p, {modelTier:'default'}); contar('usosIA'); return r; }
   return extrairJSON(await gerarServidor('json', p, id, extra));
 }
-async function iaTexto(p, tier, id){
+async function iaTexto(p, tier, id, extra = false){
   if (sample){ const r = await sample(p, {modelTier:tier}); contar('usosIA'); return r.text; }
-  return gerarServidor('svg', p, id);
+  return gerarServidor('svg', p, id, extra);
+}
+// Desenhos de uma página recém-escrita: fazem parte da página (o crédito dela já cobre), então vão como "extra"
+async function desenharDaPagina(p){
+  const est = st.capa.fonte==='infantil' ? 'infantil' : 'didatico';
+  for (const b of pagDe(p)){
+    if (!['imagem','imgtexto','abertura'].includes(b.tipo) || b.src) continue;
+    const d = String(b.sugestao || b.legenda || '').trim(); if (!d) continue;
+    try { aplicarImg('b:'+b.id, limparSVG(await iaTexto(promptSVG(d, est, 'b:'+b.id), 'complex', null, true))); }
+    catch(_){}   // sem desenho, a página continua pronta; dá para pedir de novo em "Capa, contracapa e imagens"
+  }
 }
 async function gerarServidor(tipo, pedido, id, extra = false){
   if (!VENDA.on) throw new Error('sem servidor');
@@ -2730,7 +2742,7 @@ function abrirComprar(){
   if (!pk.length){ window.open(linkZap(`Olá! Quero comprar créditos para o Criador de Apostilas. Meu usuário: ${user}`), '_blank', 'noopener'); return; }
   const marcado = Math.max(0, pk.findIndex(p => p.destaque));
   modal(`<h2>Comprar créditos</h2>
-  <p class="sub"><b>1 crédito = 1 página</b> gerada pela IA (texto ou página ilustrada). O planejamento e a contracapa não gastam créditos. Os créditos não expiram.${VENDA.cliente ? ` Seu saldo: <b>${creditosIA()}</b>.` : ''}</p>
+  <p class="sub"><b>1 crédito = 1 página completa</b> gerada pela IA, com texto e desenhos. O planejamento e a contracapa não gastam créditos. Os créditos não expiram.${VENDA.cliente ? ` Seu saldo: <b>${creditosIA()}</b>.` : ''}</p>
   <div class="pacotes" role="radiogroup" aria-label="Pacotes">${pk.map((p,i)=>`<label><input type="radio" name="pk" value="${i}" ${i===marcado?'checked':''}>${p.destaque?`<em>${esc(p.destaque)}</em>`:''}<b>${p.creditos} créditos</b><span>${precoBR(p.valor)}</span><small>${precoBR(p.valor/p.creditos)} por apostila</small></label>`).join('')}</div>
   <div id="pk-pag"></div>
   <div class="modal-acoes" id="pk-acoes"><button class="btn" data-fechar>Fechar</button><button class="btn pri" id="pk-ir">Pagar com Pix</button></div>`);
@@ -3268,7 +3280,7 @@ $('#b-conta').onclick = ()=>{
   const c = VENDA.cliente || {};
   modal(`<h2>Minha conta</h2><p class="sub">${esc(c.nome||'')} · usuário <b>${esc(c.usuario||usuarioDe(VENDA.user?.email))}</b></p>
   ${AUTO() ? `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usosIA||0}</b><span>Usos da IA automática</span></div></div>
-  <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada página, atividade, seção ou ilustração gerada no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>` : `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.apostilas||0}</b><span>Apostilas criadas</span></div><div class="tile"><b>${c.pdfs||0}</b><span>Arquivos baixados</span></div></div>
+  <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada página completa (com desenhos), atividade ou seção gerada no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>` : `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.apostilas||0}</b><span>Apostilas criadas</span></div><div class="tile"><b>${c.pdfs||0}</b><span>Arquivos baixados</span></div></div>
   <p class="dica-campo">Use “Criar com IA” no modo Semiautomático: é grátis e ilimitado.</p>`}
   <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn" id="v-senha2">Trocar senha</button><button class="btn pri" data-fechar>Fechar</button></div>
   ${legal('Veja os')}<p class="dica-campo" style="margin:6px 0 0"><button class="btn peq perigo" id="v-excluir" style="margin-top:4px">Excluir minha conta</button></p>`);

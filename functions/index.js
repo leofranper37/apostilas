@@ -90,9 +90,9 @@ async function pedirGemini(tipo, pedido) {
 }
 // Mesma lista de config.js e firestore.rules
 const ADMINS = ["admin@apostilas.local"];
-// 1 crédito = 1 página (ou atividade, seção ou ilustração) gerada pela IA.
-// O planejamento e a contracapa ("extra") não gastam crédito, mas têm este limite por cliente por dia.
-const LIMITE_EXTRAS = 30;
+// 1 crédito = 1 página completa (ou atividade ou seção) gerada pela IA.
+// Planejamento, contracapa e os desenhos das páginas ("extra") não gastam crédito, mas têm este limite por cliente por dia.
+const LIMITE_EXTRAS = 80;
 
 const SISTEMA = {
   json: "Você é o gerador de conteúdo do app Criador de Apostilas. Escreva apostilas didáticas corretas em português do Brasil e responda exatamente no formato JSON pedido, sem nenhum texto fora do JSON.",
@@ -115,13 +115,14 @@ exports.gerar = onCall(
       await db.runTransaction(async (t) => {
         const s = await t.get(ref);
         if (!s.exists || !s.get("ativo")) throw new HttpsError("permission-denied", "Seu acesso não está liberado.");
-        if ((s.get("creditos") || 0) <= 0) throw new HttpsError("resource-exhausted", "Sem créditos.");
+        // extra: basta ter crédito ou já ter usado algum (os desenhos da última página saem mesmo com o saldo em 0)
+        if ((s.get("creditos") || 0) <= 0 && !(extra && (s.get("usosIA") || 0) > 0)) throw new HttpsError("resource-exhausted", "Sem créditos.");
         const agora = FieldValue.serverTimestamp();
         if (extra) {
           const hoje = new Date().toISOString().slice(0, 10);
           const usos = s.get("extrasDia") === hoje ? (s.get("extrasUsos") || 0) : 0;
           if (usos >= LIMITE_EXTRAS)
-            throw new HttpsError("failed-precondition", "Você já fez muitos planejamentos hoje. Tente de novo amanhã.");
+            throw new HttpsError("failed-precondition", "Você chegou ao limite de planejamentos e desenhos de hoje. Tente de novo amanhã.");
           t.update(ref, { extrasDia: hoje, extrasUsos: usos + 1, ultimoAcesso: agora });
           contouExtra = true;
         } else {
