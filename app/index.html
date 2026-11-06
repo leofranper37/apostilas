@@ -1883,7 +1883,7 @@ const MODELOS_AP = {
   estudo:{em:'📰', nome:'Revista de estudo', desc:'Texto corrido, citações e quadros “Discuta”, como as revistas de EBD', fonte:'revista', cor:'#1f5f82'},
   visual:{em:'🖼️', nome:'Revista visual', desc:'Abertura com imagem grande, cartões, “Lembre-se” e faixa', fonte:'', cor:''},
   didatico:{em:'📝', nome:'Apostila didática', desc:'Títulos numerados, caixas de dica e atividades com gabarito', fonte:'', cor:''},
-  ilustrada:{em:'🎨', nome:'Página ilustrada', desc:'Cada página sai pronta como uma imagem, estilo infográfico, feita no ChatGPT ou no Gemini', fonte:'', cor:''},
+  ilustrada:{em:'🎨', nome:'Página ilustrada', desc:'Cada página sai pronta como uma imagem, estilo infográfico, desenhada pela IA (no Automático, 1 crédito por página) ou feita no ChatGPT ou no Gemini', fonte:'', cor:''},
 };
 const ilustrada = P => !!P && P.modelo==='ilustrada';
 const BASE_MAX = 5000;   // material do professor que vai em cada pedido (o servidor aceita até 12 mil caracteres)
@@ -1965,7 +1965,7 @@ ${ESQ_BLOCOS}`;
 }
 
 // Página ilustrada: pedido de UMA imagem com a página inteira pronta (texto, ícones e ilustrações)
-function promptFolha(P, p){
+function promptFolha(P, p, comRef = false){
   const i = P.paginas.indexOf(p), n = P.paginas.length, t = TIPOS_AP[P.tipo] || TIPOS_AP.escolar;
   const est = ESTILOS_IMG.find(x=>x[0]===P.est) || ESTILOS_IMG.find(x=>x[0]==='infografico');
   const cor = P.cor ? `${(CORES.find(x=>x[0]===P.cor)||[,''])[1]} (${P.cor})` : '';
@@ -1985,7 +1985,25 @@ ORGANIZAÇÃO DA PÁGINA:
 - Uma linha de rodapé com uma frase curta de fechamento.
 
 TEXTO: tudo em ${P.idioma || 'português do Brasil'}, com ortografia e acentos corretos, letras nítidas e grandes o bastante para ler impresso. Tom do texto: ${e ? e[2].split(',')[0] : 'claro e acolhedor'}${nv ? `; nível ${nv[1].toLowerCase()}` : ''}.${P.tipo==='biblica' ? ` Cite os textos bíblicos com livro, capítulo e versículo${refs ? ` (base: ${refs})` : ''}.` : refs ? ` Fontes indicadas: ${refs}.` : ''} Não invente citações de autores.${P.objetivo ? `\nObjetivo do material: ${P.objetivo}.` : ''}
-VISUAL: ilustrações e ícones no estilo ${est[2]}; ${cor ? `cor principal ${cor} com tons claros dela` : 'paleta harmoniosa de 2 ou 3 cores'}; fundo branco ou bem claro; margens livres de cerca de 1 cm; visual de revista didática profissional, organizado e fácil de ler. Sem marca d’água e sem logotipos.${P.pers ? `\nPERSONAGEM: use a pessoa da foto que estou enviando junto com este pedido (${P.pers}) na ilustração principal, mantendo o rosto e as características dela.` : ''}${P.obs ? `\nObservações: ${P.obs}` : ''}`;
+VISUAL: ilustrações e ícones no estilo ${est[2]}; ${cor ? `cor principal ${cor} com tons claros dela` : 'paleta harmoniosa de 2 ou 3 cores'}; fundo branco ou bem claro; margens livres de cerca de 1 cm; visual de revista didática profissional, organizado e fácil de ler. Sem marca d’água e sem logotipos.${P.pers && !comRef ? `\nPERSONAGEM: use a pessoa da foto que estou enviando junto com este pedido (${P.pers}) na ilustração principal, mantendo o rosto e as características dela.` : ''}${P.obs ? `\nObservações: ${P.obs}` : ''}
+
+IDENTIDADE VISUAL DA COLEÇÃO (igual em todas as ${n} páginas):
+- As páginas formam uma coleção só: mesmo estilo de ilustração, mesma paleta (cada cor sempre com a mesma função), mesmas fontes (títulos em sans-serif forte; texto em sans-serif bem legível; no máximo duas famílias).
+- Mesma grade, margens, espaçamentos, cantos arredondados, contornos, sombras, cabeçalho, quadros, ícones e rodapé, sempre na mesma posição.
+- Se aparecer um personagem que se repete, mantenha rosto, roupa, cores e proporções.
+- Mude só o conteúdo e as ilustrações do assunto desta página; não invente outro layout.
+
+TEXTO NA IMAGEM (obrigatório):
+- Escreva somente o conteúdo da página. Não escreva estas instruções, nomes de partes do pedido, códigos, endereços de site, nomes de programas nem marcas d’água.
+- Palavras reais e completas, com ortografia, acentos, concordância e pontuação corretos. Nada de letras trocadas, repetidas, embaralhadas ou texto falso de enfeite.
+- Frases curtas. Se faltar espaço, escreva menos texto em vez de espremer ou cortar palavras.
+- Revise cada palavra antes de terminar, como um revisor de texto.
+
+CONTEÚDO CORRETO (obrigatório):
+- Fatos, datas, nomes e referências precisam ser verdadeiros; na dúvida, deixe de fora.
+- Se houver contas, exercícios, tabelas ou gráficos: confira cada resultado antes de escrever, use vírgula decimal e unidades corretas, e prefira números simples.${comRef ? `
+
+MODELO VISUAL (a imagem anexada): é a página 1 desta mesma apostila. Faça esta página como a continuação dela, criada pelo mesmo designer: copie a paleta, as fontes, o cabeçalho, as margens, a grade, o formato dos quadros, o estilo dos ícones e das ilustrações, o rodapé e a densidade visual. NÃO copie os textos nem o assunto dela: use só o título, os tópicos e o conteúdo pedidos acima.` : ''}`;
 }
 // coloca (ou troca) a imagem de uma página ilustrada
 function colocarFolha(p, src){
@@ -2288,11 +2306,12 @@ function desenharPlano(){
   const P = st.plano; if (!iaDisp) modoIA = 'semi';
   const t = TIPOS_AP[P.tipo] || TIPOS_AP.escolar, rol = $('#modal-caixa').scrollTop, mesmo = !$('#modal').hidden && $('#modal-caixa .plano');
   const feitas = P.paginas.filter(p=>pagDe(p).length).length, pend = P.paginas.filter(p=>!pagDe(p).length);
-  const semi = modoIA!=='auto', cr = creditosIA(), il = ilustrada(P), imgSemi = il;
+  const semi = modoIA!=='auto', cr = creditosIA(), il = ilustrada(P), imgAuto = il && !semi && folhaAuto(), imgSemi = il && !imgAuto;
+  const selo1 = cobraCredito() ? ' · 1 crédito' : '';
   modal(`<h2>Planejamento da apostila</h2>
   ${abasModo()}
   <p class="sub"><b>${esc(P.titulo||P.tema)}</b> · ${t.em} ${t.nome} · ${MODELOS_AP[modeloDe(P)].em} ${MODELOS_AP[modeloDe(P)].nome} · ${esc(P.idioma)} · <b>${feitas} de ${P.paginas.length}</b> páginas prontas. A capa já está feita: mude o que quiser em “Capa e estilo”.
-  ${il ? 'Cada página sai pronta como uma imagem: em cada uma, clique em “Gerar esta página”, cole o pedido no ChatGPT ou no Gemini (grátis) e envie a imagem para cá.' : semi ? 'Em cada página: clique em “Copiar pedido”, cole na sua IA (grátis) e cole a resposta de volta.' : custoTexto()}</p>
+  ${imgAuto ? `Cada página sai pronta como uma imagem desenhada pela IA, com textos, ícones e ilustrações. A primeira página pronta serve de modelo para as outras.${cobraCredito() ? ` Cada página desenhada (ou desenhada de novo) gasta <b>1 crédito</b>. Saldo: ${cr} ${cr===1?'crédito':'créditos'}.` : ''}` : il ? 'Cada página sai pronta como uma imagem: em cada uma, clique em “Gerar esta página”, cole o pedido no ChatGPT ou no Gemini (grátis) e envie a imagem para cá.' : semi ? 'Em cada página: clique em “Copiar pedido”, cole na sua IA (grátis) e cole a resposta de volta.' : custoTexto()}</p>
   <div class="gerar-ia" style="margin:0 0 14px"><b>Capa, contracapa e imagens ✦</b><p>Peça à IA a imagem da capa (pode usar a sua foto como personagem), o texto e a imagem da contracapa e as ilustrações de cada página.</p><div class="pl-acoes"><button class="btn peq ia" id="ga-capa">🖼️ Imagem da capa</button><button class="btn peq ia" id="ga-contra">📘 Contracapa</button><button class="btn peq ia" id="ga-ilus">🎨 Todas as imagens (${lugaresDeImagem().filter(x=>!x.src).length} faltando)</button></div></div>
   <ol class="plano">${P.paginas.map((p,i)=>{ const ok = pagDe(p).length > 0; return `<li data-pid="${p.id}" class="${ok?'ok':''}">
     <div class="pl-cab"><span class="n">${i+1}</span><input type="text" data-pc="titulo" value="${esc(p.titulo)}" aria-label="Título da página ${i+1}" placeholder="Título da página">
@@ -2303,13 +2322,13 @@ function desenharPlano(){
     <label class="pl-rot" for="pi-${p.id}">${il ? 'Tópicos desta página (um por linha)' : 'Instruções para esta página'}</label>
     <textarea id="pi-${p.id}" data-pc="instr" rows="${il?4:2}" placeholder="${il ? 'Um tópico por linha. Ex.:&#10;O que é a membresia (At 2.41-47)&#10;Por que fazer parte de uma igreja local' : 'Opcional: o que explicar, exemplos e a imagem principal desta página'}">${esc(p.instr)}</textarea>
     ${il && ok && pagDe(p)[0].src ? `<img class="pl-mini" src="${pagDe(p)[0].src}" alt="Página ${i+1} pronta">` : ''}
-    <div class="pl-acoes"><button class="btn peq ${ok?'':'ia'}" data-pa="gerar">${imgSemi ? (ok?'↻ Gerar novamente':'🎨 Gerar esta página') : semi ? (ok?'↻ Copiar pedido de novo':'1. Copiar pedido') : (ok?'↻ Gerar novamente':'✦ Gerar esta página')}</button>${ok?'<button class="btn peq" data-pa="ver">Ver na apostila</button>':''}</div>
+    <div class="pl-acoes"><button class="btn peq ${ok?'':'ia'}" data-pa="gerar">${imgAuto ? (ok?'↻ Desenhar de novo':'🎨 Desenhar esta página') + selo1 : imgSemi ?(ok?'↻ Gerar novamente':'🎨 Gerar esta página') : semi ? (ok?'↻ Copiar pedido de novo':'1. Copiar pedido') : (ok?'↻ Gerar novamente':'✦ Gerar esta página')}</button>${ok?'<button class="btn peq" data-pa="ver">Ver na apostila</button>':''}</div>
     <div class="pl-semi"></div>
   </li>`; }).join('')}</ol>
   <button class="btn peq" id="ga-add">+ Adicionar página</button>
   <div id="ga-semi"></div><div id="ga-status"></div>
   <div class="modal-acoes"><button class="btn" id="ga-novo">Começar outra apostila</button><button class="btn" data-fechar>Fechar</button>
-  ${pend.length ? `<button class="btn ia" id="ga-lote">${imgSemi ? `🎨 Gerar a próxima página (${pend.length===1?'falta 1':`faltam ${pend.length}`})` : semi ? `Copiar pedido de ${pend.length>LOTE_SEMI ? `${LOTE_SEMI} páginas` : pend.length===1 ? '1 página' : `${pend.length} páginas`} de uma vez` : `✨ ${feitas ? 'Gerar as que faltam' : 'Gerar apostila completa'} (${pend.length} ${pend.length===1?'página':'páginas'})${cobraCredito() && !apostilaPaga() ? ' <span class="selo">✦ 1 crédito</span>' : ''}`}</button>` : ''}</div>`, true);
+  ${pend.length ? `<button class="btn ia" id="ga-lote">${imgAuto ? `🎨 Desenhar ${pend.length===1 ? 'a página que falta' : `as ${pend.length} páginas`}${cobraCredito() ? ` <span class="selo">✦ ${pend.length} ${pend.length===1?'crédito':'créditos'}</span>` : ''}` : imgSemi ?`🎨 Gerar a próxima página (${pend.length===1?'falta 1':`faltam ${pend.length}`})` : semi ? `Copiar pedido de ${pend.length>LOTE_SEMI ? `${LOTE_SEMI} páginas` : pend.length===1 ? '1 página' : `${pend.length} páginas`} de uma vez` : `✨ ${feitas ? 'Gerar as que faltam' : 'Gerar apostila completa'} (${pend.length} ${pend.length===1?'página':'páginas'})${cobraCredito() && !apostilaPaga() ? ' <span class="selo">✦ 1 crédito</span>' : ''}`}</button>` : ''}</div>`, true);
   if (mesmo) $('#modal-caixa').scrollTop = rol;
   const lista = $('#modal-caixa .plano'), status = $('#ga-status');
   const pDe = el => P.paginas.find(p=>p.id===el.closest('[data-pid]').dataset.pid);
@@ -2325,6 +2344,13 @@ function desenharPlano(){
       requestAnimationFrame(()=>{ const el = document.querySelector(`[data-bi="${k}"]`); if (el) el.scrollIntoView({block:'start'}); }); }
     else if (ac==='gerar'){
       if (!p.titulo.trim()){ li.querySelector('[data-pc=titulo]').focus(); return; }
+      if (imgAuto){
+        if (creditosIA() <= 0){ erroEm(caixa, SEM_CREDITO); return; }
+        bt.disabled = true; caixa.innerHTML = '<div class="carregando" style="margin-top:8px">Desenhando a página… leva de 30 segundos a 2 minutos. Não feche esta janela.</div>';
+        try { await desenharFolha(P, p); if (!$('#modal').hidden && st.plano===P) desenharPlano(); aviso(`Página ${i+1} pronta.`); }
+        catch(e2){ bt.disabled = false; erroEm(caixa, msgErroIA(e2)); }
+        return;
+      }
       if (imgSemi){ folhaPassos(caixa, P, p, () => { desenharPlano(); aviso(`Página ${P.paginas.indexOf(p)+1} colocada na apostila.`); }); return; }
       if (semi){
         semiPassos(caixa, {jaCopiar:true, pedido: () => promptPagina(P, p), botao:'Colocar na apostila', cortado:'Peça de novo numa conversa nova; se continuar cortando, escreva instruções mais curtas para esta página.',
@@ -2347,6 +2373,18 @@ function desenharPlano(){
   lote.onclick = async () => {
     const pend = P.paginas.filter(p=>!pagDe(p).length && p.titulo.trim());
     if (!pend.length){ erroEm(status, 'Dê um título para as páginas que faltam.'); return; }
+    if (imgAuto){
+      lote.disabled = true; let k = 0;
+      for (const p of pend){
+        if (creditosIA() <= 0){ desenharPlano(); erroEm($('#ga-status'), SEM_CREDITO); return; }
+        $('#ga-status').innerHTML = `<div class="carregando">Desenhando a página ${P.paginas.indexOf(p)+1} (${++k} de ${pend.length})… cada uma leva de 30 segundos a 2 minutos. Não feche esta janela.</div>`;
+        try { await desenharFolha(P, p); }
+        catch(e){ desenharPlano(); erroEm($('#ga-status'), `Parei na página ${P.paginas.indexOf(p)+1}. ${msgErroIA(e)} As páginas prontas ficaram na apostila.`); return; }
+        if ($('#modal').hidden || st.plano !== P) return;   // fechou a janela ou trocou de apostila: para
+      }
+      desenharPlano(); aviso('Páginas prontas! Confira cada uma; se alguma tiver letra errada, clique em “Desenhar de novo”.');
+      return;
+    }
     if (imgSemi){ const bt = document.querySelector(`#modal-caixa [data-pid="${pend[0].id}"] [data-pa=gerar]`); if (bt) bt.click(); return; }
     if (semi){
       const grupo = pend.slice(0, LOTE_SEMI);
@@ -2646,13 +2684,35 @@ async function gerarServidor(tipo, pedido, id){
     if (r.data.usos) marcarPaga(apostila, r.data.usos);
     if (r.data.cobrou) aviso('1 crédito usado nesta apostila. Gerar e refazer as páginas dela não gasta mais créditos.');
     return r.data.texto; // o saldo atualiza sozinho pelo listener da conta
-  } catch(e){
-    const err = new Error('falha');
-    const cod = String(e && e.code || '').replace('functions/', '');
-    err.code = cod==='resource-exhausted' ? 'sem_credito' : cod==='unavailable' ? 'rate_limited' : cod;
-    err.msg = cod==='not-found' || cod==='internal' && /not.?found/i.test(e.message||'') ? 'O modo automático ainda não foi ativado no servidor. Use o Semiautomático.' : (e && e.message && cod!=='internal' ? e.message : '');
-    throw err;
-  }
+  } catch(e){ throw erroServidor(e); }
+}
+// traduz o erro da função do servidor para os códigos que as telas entendem
+function erroServidor(e){
+  const err = new Error('falha');
+  const cod = String(e && e.code || '').replace('functions/', '');
+  err.code = cod==='resource-exhausted' ? 'sem_credito' : cod==='unavailable' ? 'rate_limited' : cod;
+  err.msg = cod==='not-found' || cod==='internal' && /not.?found/i.test(e.message||'') ? 'O modo automático ainda não foi ativado no servidor. Use o Semiautomático.' : (e && e.message && cod!=='internal' ? e.message : '');
+  return err;
+}
+
+// Página ilustrada no modo automático: o servidor desenha a página inteira com a IA de imagem (1 crédito por imagem).
+// A primeira página pronta vai junto como modelo visual, para todas saírem com o mesmo layout e as mesmas cores.
+const folhaAuto = () => VENDA.on && AUTO();
+async function reduzirImg(src, max = 1024){
+  const img = await carregarImg(src), k = Math.min(1, max/Math.max(img.width, img.height));
+  const cv = document.createElement('canvas'); cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+  const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(img,0,0,cv.width,cv.height);
+  return cv.toDataURL('image/jpeg', .85);
+}
+async function desenharFolha(P, p){
+  const modelo = P.paginas.map(x=>x!==p && pagDe(x).find(b=>b.tipo==='folha' && b.src)).find(Boolean);
+  let referencia = null;
+  if (modelo){ try { referencia = await reduzirImg(modelo.src); } catch(_){} }
+  let r;
+  try { r = await VENDA.fb.fn.httpsCallable(VENDA.fb.functions, 'gerarImagem', {timeout: 300000})({pedido: promptFolha(P, p, !!referencia), referencia}); }
+  catch(e){ throw erroServidor(e); }
+  const blob = await (await fetch(r.data.imagem)).blob();
+  colocarFolha(p, await prepararImagem(new File([blob], 'pagina.png', {type: blob.type || 'image/png'}), 2400));
 }
 
 /* ---------- Comprar créditos (Pix manual: o cliente paga e manda o comprovante; o administrador libera no painel) ---------- */

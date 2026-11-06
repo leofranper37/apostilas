@@ -80,6 +80,16 @@ Sobre a cota grátis:
 - No plano grátis, o Google pode usar os textos enviados para melhorar a IA dele. Não coloque dados pessoais nos pedidos.
 - Se as vendas crescerem e a cota não der mais, ative o faturamento na chave em aistudio.google.com. Aí o Gemini passa a cobrar por uso, que é barato.
 
+## Página ilustrada automática (a IA desenha a página inteira)
+No modelo **Página ilustrada**, no modo Automático, o botão **Desenhar esta página** faz a página pronta como imagem,
+com textos, ícones e ilustrações. A primeira página pronta vai junto como modelo, para as outras saírem com o mesmo visual.
+- Cada página desenhada (ou desenhada de novo) gasta **1 crédito** do cliente. O admin não gasta.
+- A IA de imagem do Gemini **não tem cota grátis**. Ative o faturamento na chave em aistudio.google.com
+  (na lista de chaves, **Configurar faturamento**). Com o faturamento ativo, o texto também passa a ser cobrado, mas sai barato.
+- O modelo padrão é `gemini-3-pro-image-preview`, que escreve bem os textos em português.
+  Para gastar menos, crie ou edite `functions/.env.criador-apostilas-leo` com `GEMINI_IMAGE_MODEL=gemini-2.5-flash-image` e publique as functions.
+- Confira o preço por imagem em https://ai.google.dev/pricing e defina o preço dos créditos com folga.
+
 ## Vender créditos
 **1 crédito = 1 apostila completa**: o planejamento, todas as páginas, os "gerar novamente" e a contracapa,
 até 40 pedidos à IA. O cliente vê o saldo no menu lateral (☰) e o botão **Gerar apostila completa · 1 crédito**.
