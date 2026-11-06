@@ -17,6 +17,8 @@ class ErroIA extends Error { constructor(msg, status) { super(msg); this.status 
 
 // Se o modelo principal estiver no limite da cota grátis, tenta este (cota grátis separada e maior)
 const RESERVA = defineString("GEMINI_MODEL_RESERVA", { default: "gemini-flash-lite-latest" });
+// resumo curto do erro, mostrado ao usuário para facilitar o suporte (sem a chave nem dados internos)
+const motivo = (e) => `${e.status ? e.status + " " : ""}${e.name === "TimeoutError" ? "demorou demais" : String(e.message || e).replace(/key=[^&\s]+/g, "")}`.slice(0, 160);
 const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));
 // Quanto o Gemini pediu para esperar (ex.: "retryDelay": "17s")
 const esperaPedida = (dados) => {
@@ -147,7 +149,7 @@ exports.gerar = onCall(
       await devolver();
       if (e.status === 429 || e.status === 503)
         throw new HttpsError("unavailable", "A IA está muito ocupada agora (ou a cota grátis do dia acabou). Espere um pouco e tente de novo; seu crédito foi devolvido.");
-      throw new HttpsError("aborted", "Não consegui gerar agora. Seu crédito foi devolvido; tente de novo.");
+      throw new HttpsError("aborted", `Não consegui gerar agora. Seu crédito foi devolvido; tente de novo. (motivo: ${motivo(e)})`);
     }
   }
 );
@@ -234,7 +236,7 @@ exports.gerarImagem = onCall(
         throw new HttpsError("unavailable", "A IA de imagens está ocupada agora. Espere um pouco e tente de novo; seu crédito foi devolvido.");
       if (e.status === 400 || e.status === 403 || e.status === 404)
         throw new HttpsError("failed-precondition", "A geração de imagens ainda não está liberada no servidor. Seu crédito foi devolvido.");
-      throw new HttpsError("aborted", "Não consegui desenhar esta página. Seu crédito foi devolvido; tente de novo.");
+      throw new HttpsError("aborted", `Não consegui desenhar esta página. Seu crédito foi devolvido; tente de novo. (motivo: ${motivo(e)})`);
     }
   }
 );
