@@ -63,16 +63,20 @@ async function pedirGemini(tipo, pedido) {
   const fim = Date.now() + 280000;
   const modelos = [...new Set([MODELO.value(), RESERVA.value()].filter(Boolean))];
   let ultimo;
-  for (const modelo of modelos) {
+  for (const [i, modelo] of modelos.entries()) {
+    const temReserva = i < modelos.length - 1;
     for (let tentativa = 1; tentativa <= 3; tentativa++) {
       const resta = fim - Date.now();
       if (resta < 15000) throw ultimo || new ErroIA("sem tempo", 503);
       try {
-        return await chamarGemini(modelo, tipo, pedido, resta);
+        // o principal tem no máximo 150 s, para sobrar tempo para o reserva (que é bem mais rápido)
+        return await chamarGemini(modelo, tipo, pedido, temReserva ? Math.min(resta, 150000) : resta);
       } catch (e) {
         ultimo = e;
         const ocupado = e.status === 429 || e.status === 500 || e.status === 503;
-        console.warn("Gemini falhou", JSON.stringify({ modelo, tentativa, status: e.status, msg: String(e.message).slice(0, 400) }));
+        console.warn("Gemini falhou", JSON.stringify({ modelo, tentativa, status: e.status, erro: e.name, msg: String(e.message).slice(0, 400) }));
+        // demorou demais, saiu cortado ou vazio: tenta logo o modelo reserva
+        if (e.name === "TimeoutError" || /^(cortado|vazio)$/.test(e.message)) break;
         if (!ocupado) throw e;
         // cota do dia acabou: não adianta esperar, vai direto para o reserva
         if (/per.?day|PerDay/i.test(e.message)) break;
