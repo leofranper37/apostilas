@@ -16,7 +16,7 @@ window.APOSTILAS_CONFIG = {
   // Modo automático com IA (pago: precisa do plano Blaze + chave da IA). false = tudo grátis
   // Com true: aparecem o saldo no menu, "Comprar créditos" e o botão "Gerar apostila completa · 1 crédito".
   // Só ligue depois de ativar o servidor (veja LEIA-ME.md > "Vender créditos").
-  modoAutomatico: false,
+  modoAutomatico: true,
   creditosIniciais: 1,      // créditos de presente ao cadastrar um cliente (só com modoAutomatico)
 
   // Pacotes de créditos à venda: 1 crédito = 1 apostila completa gerada pela IA

@@ -55,23 +55,30 @@ Console: https://console.firebase.google.com/project/criador-apostilas-leo
 - Se um cliente esquecer a senha: por enquanto, cadastre um usuário novo para ele (redefinir a senha de outra pessoa exige o plano Blaze).
 
 ## Ligar o modo automático (IA)
-1. Mude o projeto para o plano **Blaze**, o mesmo do PNCD (no console, clique em **Fazer upgrade**).
-   O Firebase cobra pouco ou nada nesse volume. O que você paga de verdade é a IA.
-2. Crie uma chave em https://console.anthropic.com e coloque crédito nela.
-3. No terminal, nesta pasta:
+A IA do modo automático é o **Google Gemini**, que tem uma cota grátis por dia.
+1. Mude o projeto para o plano **Blaze** (no console do Firebase, clique em **Fazer upgrade**).
+   Ele pede um cartão, mas tem uma cota grátis por mês. Com pouco uso, sai R$ 0.
+   Dica: em Google Cloud > Faturamento > Orçamentos, crie um alerta de R$ 10 para ser avisado se algo cobrar.
+2. Crie a chave grátis em https://aistudio.google.com/apikey (entre com a sua conta Google e clique em **Create API key**).
+   Não ative o faturamento nessa chave: assim ela fica sempre no plano grátis e nunca cobra.
+3. No terminal, nesta pasta (cole a chave quando ele pedir):
    ```
-   firebase functions:secrets:set ANTHROPIC_API_KEY
+   firebase functions:secrets:set GEMINI_API_KEY
    firebase deploy --only functions
    ```
 
-O padrão é o modelo `claude-opus-5-5` com esforço `low`, para responder rápido.
-Para trocar (por exemplo, para `claude-sonnet-5-5`, que é mais barato), crie o arquivo `functions/.env` com:
+O padrão é o modelo `gemini-flash-latest` (o Flash mais novo, com cota grátis).
+Para trocar, crie o arquivo `functions/.env` com, por exemplo:
 ```
-ANTHROPIC_MODEL=claude-sonnet-5-5
-ANTHROPIC_EFFORT=low
+GEMINI_MODEL=gemini-2.5-pro
 ```
 Depois rode `firebase deploy --only functions` de novo.
-Acompanhe os gastos em console.anthropic.com e cobre os créditos de forma a cobrir esse custo.
+
+Sobre a cota grátis:
+- Ela tem um limite de pedidos por minuto e por dia. Cada página da apostila é um pedido.
+  Quando o limite acaba, o cliente vê "A IA está muito ocupada" e o crédito volta para ele.
+- No plano grátis, o Google pode usar os textos enviados para melhorar a IA dele. Não coloque dados pessoais nos pedidos.
+- Se as vendas crescerem e a cota não der mais, ative o faturamento na chave em aistudio.google.com. Aí o Gemini passa a cobrar por uso, que é barato.
 
 ## Vender créditos
 **1 crédito = 1 apostila completa**: o planejamento, todas as páginas, os "gerar novamente" e a contracapa,
@@ -93,7 +100,7 @@ Quando alguém compra:
 3. Abra **Painel admin**, toque em **Créditos** no cliente e use +5, +10 ou +30. O saldo muda na hora na tela dele.
 
 Cada cliente novo ganha `creditosIniciais` créditos de presente para testar (o padrão é 1).
-Antes de definir o preço, gere algumas apostilas e veja o custo real em Functions > Registros ("uso da IA") e em console.anthropic.com.
+Antes de definir o preço, gere algumas apostilas e veja o custo real em Functions > Registros ("uso da IA") e o uso da chave em aistudio.google.com.
 
 ## Publicar uma mudança no app
 ```

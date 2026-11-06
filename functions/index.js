@@ -1,18 +1,48 @@
-// Modo automático: confere o login, gasta 1 crédito e pede o conteúdo ao Claude. Se der erro, devolve o crédito.
-// Chave da IA: firebase functions:secrets:set ANTHROPIC_API_KEY
+// Modo automático: confere o login, gasta 1 crédito e pede o conteúdo ao Google Gemini. Se der erro, devolve o crédito.
+// Chave da IA (grátis em https://aistudio.google.com/apikey): firebase functions:secrets:set GEMINI_API_KEY
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
-const Anthropic = require("@anthropic-ai/sdk");
 
 initializeApp();
 const db = getFirestore();
-const CHAVE = defineSecret("ANTHROPIC_API_KEY");
-const MODELO = defineString("ANTHROPIC_MODEL", { default: "claude-opus-5-5" });
-// "low" responde mais rápido; "medium" escreve com mais capricho e demora mais
-const ESFORCO = defineString("ANTHROPIC_EFFORT", { default: "low" });
+const CHAVE = defineSecret("GEMINI_API_KEY");
+// "gemini-flash-latest" sempre aponta para o Flash mais novo, que tem cota grátis. Para trocar: GEMINI_MODEL em functions/.env
+const MODELO = defineString("GEMINI_MODEL", { default: "gemini-flash-latest" });
+
+// Erro da IA com o código HTTP, para avisar o cliente do jeito certo
+class ErroIA extends Error { constructor(msg, status) { super(msg); this.status = status; } }
+
+async function pedirGemini(tipo, pedido) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODELO.value())}:generateContent`;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": CHAVE.value() },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SISTEMA[tipo] }] },
+      contents: [{ role: "user", parts: [{ text: pedido }] }],
+      generationConfig: {
+        maxOutputTokens: tipo === "svg" ? 24000 : 32000,
+        ...(tipo === "json" ? { responseMimeType: "application/json" } : {}),
+      },
+    }),
+    signal: AbortSignal.timeout(280000),
+  });
+  const dados = await r.json().catch(() => ({}));
+  if (!r.ok) throw new ErroIA((dados.error && dados.error.message) || "erro " + r.status, r.status);
+  // custo de cada uso (tokens): veja em Functions > Registros
+  console.log("uso da IA", JSON.stringify({ tipo, modelo: dados.modelVersion, usage: dados.usageMetadata }));
+  if (dados.promptFeedback && dados.promptFeedback.blockReason) throw new ErroIA("recusado");
+  const c = (dados.candidates || [])[0];
+  if (!c) throw new ErroIA("vazio");
+  if (c.finishReason === "MAX_TOKENS") throw new ErroIA("cortado");
+  if (c.finishReason && c.finishReason !== "STOP") throw new ErroIA("recusado: " + c.finishReason);
+  const texto = ((c.content && c.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
+  if (!texto) throw new ErroIA("vazio");
+  return texto;
+}
 // Mesma lista de config.js e firestore.rules
 const ADMINS = ["admin@apostilas.local"];
 // Pedidos de IA que 1 crédito cobre numa mesma apostila (mesmo número em app/index.html: LIMITE_IA)
@@ -70,30 +100,13 @@ exports.gerar = onCall(
     };
 
     try {
-      const claude = new Anthropic({ apiKey: CHAVE.value() });
-      const stream = claude.beta.messages.stream({
-        model: MODELO.value(),
-        max_tokens: tipo === "svg" ? 24000 : 32000,
-        system: SISTEMA[tipo],
-        messages: [{ role: "user", content: pedido }],
-        output_config: { effort: ESFORCO.value() },
-        // Se o filtro de segurança recusar por engano, a Anthropic tenta outro modelo no próprio servidor
-        fallbacks: "default",
-        betas: ["server-side-fallback-2026-07-01"],
-      });
-      const msg = await stream.finalMessage();
-      // custo de cada uso (tokens), para calcular o preço dos créditos: veja em Functions > Registros
-      console.log("uso da IA", JSON.stringify({ tipo, modelo: msg.model, usage: msg.usage, admin: ehAdmin }));
-      if (msg.stop_reason === "refusal") throw new Error("recusado");
-      if (msg.stop_reason === "max_tokens") throw new Error("cortado");
-      const texto = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-      if (!texto) throw new Error("vazio");
+      const texto = await pedirGemini(tipo, pedido);
       return { texto, cobrou, usos: ehAdmin ? 0 : usos, limite: LIMITE };
     } catch (e) {
       console.error("falha na IA:", e);
       await devolver();
-      if (e instanceof Anthropic.RateLimitError || (e instanceof Anthropic.APIError && e.status === 529))
-        throw new HttpsError("unavailable", "A IA está muito ocupada agora. Espere um minuto e tente de novo; seu crédito foi devolvido.");
+      if (e.status === 429 || e.status === 503)
+        throw new HttpsError("unavailable", "A IA está muito ocupada agora (ou a cota grátis do dia acabou). Espere um pouco e tente de novo; seu crédito foi devolvido.");
       throw new HttpsError("aborted", "Não consegui gerar agora. Seu crédito foi devolvido; tente de novo.");
     }
   }
