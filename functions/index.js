@@ -15,11 +15,20 @@ const MODELO = defineString("GEMINI_MODEL", { default: "gemini-flash-latest" });
 // Erro da IA com o código HTTP, para avisar o cliente do jeito certo
 class ErroIA extends Error { constructor(msg, status) { super(msg); this.status = status; } }
 
-async function pedirGemini(tipo, pedido) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODELO.value())}:generateContent`;
+// Se o modelo principal estiver no limite da cota grátis, tenta este (cota grátis separada e maior)
+const RESERVA = defineString("GEMINI_MODEL_RESERVA", { default: "gemini-flash-lite-latest" });
+const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));
+// Quanto o Gemini pediu para esperar (ex.: "retryDelay": "17s")
+const esperaPedida = (dados) => {
+  const d = ((dados.error && dados.error.details) || []).find((x) => x.retryDelay);
+  return d ? Math.ceil(parseFloat(d.retryDelay) * 1000) : 0;
+};
+
+async function chamarGemini(modelo, tipo, pedido, ms) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent`;
   const r = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": CHAVE.value() },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": CHAVE.value().trim() },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: SISTEMA[tipo] }] },
       contents: [{ role: "user", parts: [{ text: pedido }] }],
@@ -28,10 +37,14 @@ async function pedirGemini(tipo, pedido) {
         ...(tipo === "json" ? { responseMimeType: "application/json" } : {}),
       },
     }),
-    signal: AbortSignal.timeout(280000),
+    signal: AbortSignal.timeout(ms),
   });
   const dados = await r.json().catch(() => ({}));
-  if (!r.ok) throw new ErroIA((dados.error && dados.error.message) || "erro " + r.status, r.status);
+  if (!r.ok) {
+    const e = new ErroIA((dados.error && dados.error.message) || "erro " + r.status, r.status);
+    e.espera = esperaPedida(dados);
+    throw e;
+  }
   // custo de cada uso (tokens): veja em Functions > Registros
   console.log("uso da IA", JSON.stringify({ tipo, modelo: dados.modelVersion, usage: dados.usageMetadata }));
   if (dados.promptFeedback && dados.promptFeedback.blockReason) throw new ErroIA("recusado");
@@ -42,6 +55,34 @@ async function pedirGemini(tipo, pedido) {
   const texto = ((c.content && c.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
   if (!texto) throw new ErroIA("vazio");
   return texto;
+}
+
+// Pede ao modelo principal; se estiver ocupado ou no limite, espera o que o Gemini pedir e tenta de novo,
+// e depois passa para o modelo reserva. Tudo dentro de ~280 s (a função tem 300 s).
+async function pedirGemini(tipo, pedido) {
+  const fim = Date.now() + 280000;
+  const modelos = [...new Set([MODELO.value(), RESERVA.value()].filter(Boolean))];
+  let ultimo;
+  for (const modelo of modelos) {
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      const resta = fim - Date.now();
+      if (resta < 15000) throw ultimo || new ErroIA("sem tempo", 503);
+      try {
+        return await chamarGemini(modelo, tipo, pedido, resta);
+      } catch (e) {
+        ultimo = e;
+        const ocupado = e.status === 429 || e.status === 500 || e.status === 503;
+        console.warn("Gemini falhou", JSON.stringify({ modelo, tentativa, status: e.status, msg: String(e.message).slice(0, 400) }));
+        if (!ocupado) throw e;
+        // cota do dia acabou: não adianta esperar, vai direto para o reserva
+        if (/per.?day|PerDay/i.test(e.message)) break;
+        const ms = Math.min(e.espera || tentativa * 5000, 30000);
+        if (fim - Date.now() - ms < 15000) break;
+        await espera(ms);
+      }
+    }
+  }
+  throw ultimo;
 }
 // Mesma lista de config.js e firestore.rules
 const ADMINS = ["admin@apostilas.local"];

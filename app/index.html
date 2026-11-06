@@ -2365,7 +2365,22 @@ function desenharPlano(){
     for (const p of pend){
       if (!podeGerar()){ desenharPlano(); erroEm($('#ga-status'), SEM_CREDITO); return; }
       $('#ga-status').innerHTML = `<div class="carregando">Escrevendo a página ${P.paginas.indexOf(p)+1} (${++k} de ${pend.length})… não feche esta janela.</div>`;
-      try { colocarPagina(p, await iaJSON(promptPagina(P, p))); }
+      try {
+        let r;
+        // cota grátis da IA no limite: espera 1 minuto e tenta de novo (até 2 vezes) antes de parar
+        for (let t = 0; ; t++){
+          try { r = await iaJSON(promptPagina(P, p)); break; }
+          catch(e){
+            if (!(e && e.code==='rate_limited') || t >= 2) throw e;
+            for (let s = 60; s > 0; s--){
+              if ($('#modal').hidden || st.plano !== P) return;
+              $('#ga-status').innerHTML = `<div class="carregando">A IA pediu uma pausa. Tento de novo a página ${P.paginas.indexOf(p)+1} em ${s} s… não feche esta janela.</div>`;
+              await new Promise(ok=>setTimeout(ok, 1000));
+            }
+          }
+        }
+        colocarPagina(p, r);
+      }
       catch(e){ desenharPlano(); erroEm($('#ga-status'), `Parei na página ${P.paginas.indexOf(p)+1}. ${msgErroIA(e)} As páginas prontas ficaram na apostila.`); return; }
       if ($('#modal').hidden || st.plano !== P) return;   // fechou a janela ou trocou de apostila: para de gerar
     }
