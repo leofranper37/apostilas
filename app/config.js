@@ -19,8 +19,8 @@ window.APOSTILAS_CONFIG = {
   modoAutomatico: true,
   creditosIniciais: 1,      // créditos de presente ao cadastrar um cliente (só com modoAutomatico)
 
-  // Pacotes de créditos à venda: 1 crédito = 1 apostila completa gerada pela IA
-  // (todas as páginas, "gerar novamente" e a contracapa, até 40 pedidos por apostila)
+  // Pacotes de créditos à venda: 1 crédito = 1 página gerada pela IA (texto ou página ilustrada).
+  // O planejamento e a contracapa não gastam créditos.
   pacotes: [
     {creditos: 5,  valor: 19.90},
     {creditos: 10, valor: 34.90, destaque: 'Mais vendido'},

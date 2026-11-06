@@ -90,8 +90,9 @@ async function pedirGemini(tipo, pedido) {
 }
 // Mesma lista de config.js e firestore.rules
 const ADMINS = ["admin@apostilas.local"];
-// Pedidos de IA que 1 crédito cobre numa mesma apostila (mesmo número em app/index.html: LIMITE_IA)
-const LIMITE = 40;
+// 1 crédito = 1 página (ou atividade, seção ou ilustração) gerada pela IA.
+// O planejamento e a contracapa ("extra") não gastam crédito, mas têm este limite por cliente por dia.
+const LIMITE_EXTRAS = 30;
 
 const SISTEMA = {
   json: "Você é o gerador de conteúdo do app Criador de Apostilas. Escreva apostilas didáticas corretas em português do Brasil e responda exatamente no formato JSON pedido, sem nenhum texto fora do JSON.",
@@ -102,51 +103,44 @@ exports.gerar = onCall(
   { region: "southamerica-east1", secrets: [CHAVE], timeoutSeconds: 300, memory: "512MiB", maxInstances: 10 },
   async (req) => {
     if (!req.auth) throw new HttpsError("unauthenticated", "Entre na sua conta de novo.");
-    const { tipo, pedido, apostila } = req.data || {};
+    const { tipo, pedido } = req.data || {};
+    const extra = (req.data || {}).extra === true;
     if (!["json", "svg"].includes(tipo) || typeof pedido !== "string" || !pedido.trim() || pedido.length > 12000)
       throw new HttpsError("invalid-argument", "Pedido inválido.");
-    // 1 crédito vale para uma apostila inteira: o primeiro pedido dela desconta 1 crédito; os seguintes
-    // (páginas, "gerar novamente", contracapa) não descontam, até LIMITE pedidos. Passou disso, desconta mais 1.
-    if (typeof apostila !== "string" || !/^[A-Za-z0-9_-]{6,64}$/.test(apostila))
-      throw new HttpsError("invalid-argument", "Apostila inválida. Atualize a página e tente de novo.");
 
     const ehAdmin = ADMINS.includes(req.auth.token.email);
     const ref = db.collection("clientes").doc(req.auth.uid);
-    const gRef = ref.collection("geracoes").doc(apostila);
-    let cobrou = false, antes = 0, usos = 0;
+    let cobrou = false, contouExtra = false;
     if (!ehAdmin) {
       await db.runTransaction(async (t) => {
-        const s = await t.get(ref), g = await t.get(gRef);
+        const s = await t.get(ref);
         if (!s.exists || !s.get("ativo")) throw new HttpsError("permission-denied", "Seu acesso não está liberado.");
-        antes = g.exists ? (g.get("usos") || 0) : -1;   // -1: apostila nova
+        if ((s.get("creditos") || 0) <= 0) throw new HttpsError("resource-exhausted", "Sem créditos.");
         const agora = FieldValue.serverTimestamp();
-        if (antes < 0 || antes >= LIMITE) {
-          if ((s.get("creditos") || 0) <= 0) throw new HttpsError("resource-exhausted", "Sem créditos.");
-          t.update(ref, { creditos: FieldValue.increment(-1), usosIA: FieldValue.increment(1), ultimoAcesso: agora });
-          t.set(gRef, { usos: 1, creditos: FieldValue.increment(1), ultimoUso: agora, ...(antes < 0 ? { criadoEm: agora } : {}) }, { merge: true });
-          cobrou = true; usos = 1;
+        if (extra) {
+          const hoje = new Date().toISOString().slice(0, 10);
+          const usos = s.get("extrasDia") === hoje ? (s.get("extrasUsos") || 0) : 0;
+          if (usos >= LIMITE_EXTRAS)
+            throw new HttpsError("failed-precondition", "Você já fez muitos planejamentos hoje. Tente de novo amanhã.");
+          t.update(ref, { extrasDia: hoje, extrasUsos: usos + 1, ultimoAcesso: agora });
+          contouExtra = true;
         } else {
-          t.update(gRef, { usos: FieldValue.increment(1), ultimoUso: agora });
-          t.update(ref, { ultimoAcesso: agora });
-          usos = antes + 1;
+          t.update(ref, { creditos: FieldValue.increment(-1), usosIA: FieldValue.increment(1), ultimoAcesso: agora });
+          cobrou = true;
         }
       });
     }
-    // deu errado: desfaz exatamente o que este pedido fez
+    // deu errado: desfaz o que este pedido fez
     const devolver = async () => {
-      if (ehAdmin) return;
       try {
-        if (!cobrou) return await gRef.update({ usos: FieldValue.increment(-1) });
-        const b = db.batch();
-        b.update(ref, { creditos: FieldValue.increment(1), usosIA: FieldValue.increment(-1) });
-        if (antes < 0) b.delete(gRef); else b.update(gRef, { usos: antes, creditos: FieldValue.increment(-1) });
-        await b.commit();
+        if (cobrou) await ref.update({ creditos: FieldValue.increment(1), usosIA: FieldValue.increment(-1) });
+        else if (contouExtra) await ref.update({ extrasUsos: FieldValue.increment(-1) });
       } catch (_) {}
     };
 
     try {
       const texto = await pedirGemini(tipo, pedido);
-      return { texto, cobrou, usos: ehAdmin ? 0 : usos, limite: LIMITE };
+      return { texto, cobrou };
     } catch (e) {
       console.error("falha na IA:", e);
       await devolver();

@@ -2265,9 +2265,9 @@ function formGerador(){
     $('#modal-caixa').scrollTop = 0;
   }
   if (modoIA==='auto'){
-    const selo = cobraCredito() ? '<span class="selo">✦ 1 crédito</span>' : '';
+    const selo = cobraCredito() ? '<span class="selo">✦ 1 crédito por página</span>' : '';
     $('#ga-botoes').innerHTML = `<button class="btn ia grande" id="ga-ir">✨ Gerar apostila completa ${selo}</button><button class="btn" id="ga-plan">Só planejar (revisar antes)</button><button class="btn" id="ga-manual">✎ Definir manualmente</button>`;
-    if (cobraCredito()) status.innerHTML = `<p class="dica-campo" style="margin:4px 0 0">${custoTexto('-')}</p>`;
+    if (cobraCredito()) status.innerHTML = `<p class="dica-campo" style="margin:4px 0 0">${custoTexto()}</p>`;
     const gerar = async (soPlano) => {
       const f = pegar(); if (!f) return;
       const id = novoId();
@@ -2275,7 +2275,7 @@ function formGerador(){
       document.querySelectorAll('#ga-botoes .btn').forEach(x=>x.disabled = true);
       status.innerHTML = '<div class="carregando">Planejando as páginas…</div>';
       try {
-        const r = await iaJSON(promptPlano(f), id);
+        const r = await iaJSON(promptPlano(f), id, true);
         const ps = (r && Array.isArray(r.paginas) ? r.paginas : []).filter(x=>x && (x.titulo || x.instrucoes)).slice(0, 30);
         if (!ps.length) throw new Error('vazio');
         formGerador.etapa = 1; iniciarPlano(f, ps, r.titulo, r.subtitulo, id); desenharPlano();
@@ -2328,7 +2328,7 @@ function desenharPlano(){
   <button class="btn peq" id="ga-add">+ Adicionar página</button>
   <div id="ga-semi"></div><div id="ga-status"></div>
   <div class="modal-acoes"><button class="btn" id="ga-novo">Começar outra apostila</button><button class="btn" data-fechar>Fechar</button>
-  ${pend.length ? `<button class="btn ia" id="ga-lote">${imgAuto ? `🎨 Desenhar ${pend.length===1 ? 'a página que falta' : `as ${pend.length} páginas`}${cobraCredito() ? ` <span class="selo">✦ ${pend.length} ${pend.length===1?'crédito':'créditos'}</span>` : ''}` : imgSemi ?`🎨 Gerar a próxima página (${pend.length===1?'falta 1':`faltam ${pend.length}`})` : semi ? `Copiar pedido de ${pend.length>LOTE_SEMI ? `${LOTE_SEMI} páginas` : pend.length===1 ? '1 página' : `${pend.length} páginas`} de uma vez` : `✨ ${feitas ? 'Gerar as que faltam' : 'Gerar apostila completa'} (${pend.length} ${pend.length===1?'página':'páginas'})${cobraCredito() && !apostilaPaga() ? ' <span class="selo">✦ 1 crédito</span>' : ''}`}</button>` : ''}</div>`, true);
+  ${pend.length ? `<button class="btn ia" id="ga-lote">${imgAuto ? `🎨 Desenhar ${pend.length===1 ? 'a página que falta' : `as ${pend.length} páginas`}${cobraCredito() ? ` <span class="selo">✦ ${pend.length} ${pend.length===1?'crédito':'créditos'}</span>` : ''}` : imgSemi ?`🎨 Gerar a próxima página (${pend.length===1?'falta 1':`faltam ${pend.length}`})` : semi ? `Copiar pedido de ${pend.length>LOTE_SEMI ? `${LOTE_SEMI} páginas` : pend.length===1 ? '1 página' : `${pend.length} páginas`} de uma vez` : `✨ ${feitas ? 'Gerar as que faltam' : 'Gerar apostila completa'} (${pend.length} ${pend.length===1?'página':'páginas'})${cobraCredito() ? ` <span class="selo">✦ ${nCred(pend.length)}</span>` : ''}`}</button>` : ''}</div>`, true);
   if (mesmo) $('#modal-caixa').scrollTop = rol;
   const lista = $('#modal-caixa .plano'), status = $('#ga-status');
   const pDe = el => P.paginas.find(p=>p.id===el.closest('[data-pid]').dataset.pid);
@@ -2424,7 +2424,7 @@ function desenharPlano(){
     }
     if (st.capa.contracapa && !st.capa.contraTexto && st.plano===P){
       $('#ga-status').innerHTML = '<div class="carregando">Escrevendo a contracapa…</div>';
-      try { const r = await iaJSON(promptContracapa()); if (r && r.texto) Object.assign(st.capa, {contraFrase:String(r.frase||'').replace(/^[“"]|[”"]$/g,''), contraFonte:r.fonte||'', contraTexto:r.texto}); salvarLocal(); renderCapa(); preview(); } catch(_){}
+      try { const r = await iaJSON(promptContracapa(), null, true); if (r && r.texto) Object.assign(st.capa, {contraFrase:String(r.frase||'').replace(/^[“"]|[”"]$/g,''), contraFonte:r.fonte||'', contraTexto:r.texto}); salvarLocal(); renderCapa(); preview(); } catch(_){}
     }
     if ($('#modal').hidden || st.plano!==P) return;
     desenharPlano(); aviso('Apostila completa! Agora coloque as imagens: “Capa, contracapa e imagens”.');
@@ -2636,7 +2636,7 @@ function abrirContracapa(voltar){
     $('#cc-ir').onclick = async () => {
       if (!podeGerar()){ erroEm($('#cc-status'), SEM_CREDITO); return; }
       $('#cc-ir').disabled = true; $('#cc-status').innerHTML = '<div class="carregando">Escrevendo a contracapa…</div>';
-      try { usar(await iaJSON(promptContracapa())); } catch(e){ $('#cc-ir').disabled = false; erroEm($('#cc-status'), msgErroIA(e)); }
+      try { usar(await iaJSON(promptContracapa(), null, true)); } catch(e){ $('#cc-ir').disabled = false; erroEm($('#cc-status'), msgErroIA(e)); }
     };
   } else semiPassos($('#cc-semi'), {pedido: promptContracapa, botao:'Usar na contracapa', usar});
   document.querySelectorAll('#modal-caixa [data-modo]').forEach(b=>b.onclick = ()=>{ if (b.disabled) return; modoIA = b.dataset.modo; abrirContracapa(voltar); });
@@ -2652,37 +2652,31 @@ const usuarioDe = e => String(e||'').replace(DOMINIO, '');
 const AUTO = () => CFG.modoAutomatico === true;
 const msgSemAuto = () => VENDA.on && !AUTO() ? 'Em breve' : VENDA.on ? 'Peça créditos ao administrador para usar o modo automático' : 'Disponível na versão com conta';
 
-// 1 crédito = 1 apostila inteira (o servidor cobra no primeiro pedido dela e libera até LIMITE_IA pedidos)
-const LIMITE_IA = 40;   // mesmo número de functions/index.js (LIMITE)
-const pagas = () => { try { return JSON.parse(localStorage.getItem('apostilas-pagas')) || {}; } catch(_){ return {}; } };
-const usosDe = id => +pagas()[id] || 0;
-function marcarPaga(id, usos){ const p = pagas(); p[id] = usos; try { localStorage.setItem('apostilas-pagas', JSON.stringify(p)); } catch(_){} }
-const apostilaPaga = (id = st.id) => { const u = usosDe(id); return u > 0 && u < LIMITE_IA; };
-const podeGerar = (id = st.id) => creditosIA() > 0 || apostilaPaga(id);
-const cobraCredito = () => VENDA.on && !VENDA.admin;   // no site com conta, o cliente paga por apostila
+// 1 crédito = 1 página gerada pela IA (também atividade, seção ou ilustração; "gerar de novo" gasta outro).
+// O planejamento e a contracapa ("extra") não gastam crédito (o servidor limita quantos por dia).
+const apostilaPaga = () => false;
+const podeGerar = () => creditosIA() > 0;
+const cobraCredito = () => VENDA.on && !VENDA.admin;   // no site com conta, o cliente paga por página
+const nCred = n => `${n} ${n===1?'crédito':'créditos'}`;
 // frase sobre o custo, para mostrar perto dos botões de gerar
-function custoTexto(id = st.id){
+function custoTexto(){
   if (!cobraCredito()) return '';
-  const cr = creditosIA();
-  if (apostilaPaga(id)) return `✓ Esta apostila já está paga: gerar e refazer páginas dela não gasta mais créditos (${LIMITE_IA - usosDe(id)} pedidos restantes). Saldo: ${cr} ${cr===1?'crédito':'créditos'}.`;
-  return `Gerar esta apostila gasta <b>1 crédito</b>, que vale para todas as páginas, “gerar novamente” e a contracapa. Saldo: ${cr} ${cr===1?'crédito':'créditos'}.`;
+  return `Cada página gerada pela IA gasta <b>1 crédito</b> (gerar de novo também). O planejamento e a contracapa não gastam. Saldo: ${nCred(creditosIA())}.`;
 }
 
-async function iaJSON(p, id){
+async function iaJSON(p, id, extra = false){
   if (sample){ const r = await sample.json(p, {modelTier:'default'}); contar('usosIA'); return r; }
-  return extrairJSON(await gerarServidor('json', p, id));
+  return extrairJSON(await gerarServidor('json', p, id, extra));
 }
 async function iaTexto(p, tier, id){
   if (sample){ const r = await sample(p, {modelTier:tier}); contar('usosIA'); return r.text; }
   return gerarServidor('svg', p, id);
 }
-async function gerarServidor(tipo, pedido, id){
+async function gerarServidor(tipo, pedido, id, extra = false){
   if (!VENDA.on) throw new Error('sem servidor');
-  const {httpsCallable} = VENDA.fb.fn, apostila = id || st.id || (st.id = novoId());
+  const {httpsCallable} = VENDA.fb.fn;
   try {
-    const r = await httpsCallable(VENDA.fb.functions, 'gerar', {timeout: 300000})({tipo, pedido, apostila});
-    if (r.data.usos) marcarPaga(apostila, r.data.usos);
-    if (r.data.cobrou) aviso('1 crédito usado nesta apostila. Gerar e refazer as páginas dela não gasta mais créditos.');
+    const r = await httpsCallable(VENDA.fb.functions, 'gerar', {timeout: 300000})({tipo, pedido, extra});
     return r.data.texto; // o saldo atualiza sozinho pelo listener da conta
   } catch(e){ throw erroServidor(e); }
 }
@@ -2736,7 +2730,7 @@ function abrirComprar(){
   if (!pk.length){ window.open(linkZap(`Olá! Quero comprar créditos para o Criador de Apostilas. Meu usuário: ${user}`), '_blank', 'noopener'); return; }
   const marcado = Math.max(0, pk.findIndex(p => p.destaque));
   modal(`<h2>Comprar créditos</h2>
-  <p class="sub"><b>1 crédito = 1 apostila completa</b> gerada pela IA: todas as páginas, “gerar novamente” e a contracapa. Os créditos não expiram.${VENDA.cliente ? ` Seu saldo: <b>${creditosIA()}</b>.` : ''}</p>
+  <p class="sub"><b>1 crédito = 1 página</b> gerada pela IA (texto ou página ilustrada). O planejamento e a contracapa não gastam créditos. Os créditos não expiram.${VENDA.cliente ? ` Seu saldo: <b>${creditosIA()}</b>.` : ''}</p>
   <div class="pacotes" role="radiogroup" aria-label="Pacotes">${pk.map((p,i)=>`<label><input type="radio" name="pk" value="${i}" ${i===marcado?'checked':''}>${p.destaque?`<em>${esc(p.destaque)}</em>`:''}<b>${p.creditos} créditos</b><span>${precoBR(p.valor)}</span><small>${precoBR(p.valor/p.creditos)} por apostila</small></label>`).join('')}</div>
   <div id="pk-pag"></div>
   <div class="modal-acoes" id="pk-acoes"><button class="btn" data-fechar>Fechar</button><button class="btn pri" id="pk-ir">Pagar com Pix</button></div>`);
@@ -3066,7 +3060,7 @@ function renderAtividades(){
   if ($('#at-puxar')) $('#at-puxar').onclick = () => { $('#at-base').value = textoDaApostila(); if (!$('#at-tema').value.trim()) $('#at-tema').value = st.capa.titulo || ''; renderAtividades.ult = ler(); aviso('Texto da apostila aberta colocado como base.'); };
   const botoes = () => {
     const a = ler(), idAlvo = a.destino==='fim' ? st.id : null, paga = idAlvo && apostilaPaga(idAlvo);
-    const selo = cobraCredito() ? `<span class="selo">${paga ? '✓ já paga' : '✦ 1 crédito'}</span>` : '';
+    const selo = cobraCredito() ? '<span class="selo">✦ 1 crédito</span>' : '';
     $('#at-botoes').innerHTML = (iaDisp ? `<button type="button" class="btn ia grande" id="at-ir">✨ Gerar atividade${selo}</button>` : '')
       + `<button type="button" class="btn${iaDisp ? '' : ' ia grande'}" id="at-gratis">${iaDisp ? 'Fazer de graça com o ChatGPT ou o Gemini' : '✦ Gerar com o ChatGPT ou o Gemini (grátis)'}</button>`;
     if ($('#at-ir')) $('#at-ir').onclick = gerar;
@@ -3274,7 +3268,7 @@ $('#b-conta').onclick = ()=>{
   const c = VENDA.cliente || {};
   modal(`<h2>Minha conta</h2><p class="sub">${esc(c.nome||'')} · usuário <b>${esc(c.usuario||usuarioDe(VENDA.user?.email))}</b></p>
   ${AUTO() ? `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.creditos||0}</b><span>Créditos do modo automático</span></div><div class="tile"><b>${c.usosIA||0}</b><span>Usos da IA automática</span></div></div>
-  <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada apostila, seção ou ilustração no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>` : `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.apostilas||0}</b><span>Apostilas criadas</span></div><div class="tile"><b>${c.pdfs||0}</b><span>Arquivos baixados</span></div></div>
+  <p class="dica-campo">O modo Semiautomático é grátis e ilimitado. Cada página, atividade, seção ou ilustração gerada no modo Automático gasta 1 crédito. Para mais créditos, fale com o administrador.</p>` : `<div class="tiles" style="margin:0 0 12px"><div class="tile"><b>${c.apostilas||0}</b><span>Apostilas criadas</span></div><div class="tile"><b>${c.pdfs||0}</b><span>Arquivos baixados</span></div></div>
   <p class="dica-campo">Use “Criar com IA” no modo Semiautomático: é grátis e ilimitado.</p>`}
   <div class="modal-acoes"><button class="btn perigo" id="v-sair2">Sair da conta</button><button class="btn" id="v-senha2">Trocar senha</button><button class="btn pri" data-fechar>Fechar</button></div>
   ${legal('Veja os')}<p class="dica-campo" style="margin:6px 0 0"><button class="btn peq perigo" id="v-excluir" style="margin-top:4px">Excluir minha conta</button></p>`);

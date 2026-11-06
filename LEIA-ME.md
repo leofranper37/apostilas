@@ -91,8 +91,9 @@ com textos, ícones e ilustrações. A primeira página pronta vai junto como mo
 - Confira o preço por imagem em https://ai.google.dev/pricing e defina o preço dos créditos com folga.
 
 ## Vender créditos
-**1 crédito = 1 apostila completa**: o planejamento, todas as páginas, os "gerar novamente" e a contracapa,
-até 40 pedidos à IA. O cliente vê o saldo no menu lateral (☰) e o botão **Gerar apostila completa · 1 crédito**.
+**1 crédito = 1 página** gerada pela IA: cada página de texto, página ilustrada, atividade, seção ou ilustração.
+"Gerar de novo" gasta outro crédito. O planejamento e a contracapa não gastam (até 30 por cliente por dia).
+O cliente vê o saldo no menu lateral (☰) e o botão **Gerar apostila completa · 1 crédito por página**.
 As imagens continuam grátis, com os prompts para o ChatGPT ou o Gemini.
 
 Para ligar:
