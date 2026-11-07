@@ -106,7 +106,26 @@ Para ligar:
    - mude `modoAutomatico` para `true`.
 3. Publique: `firebase deploy --only functions,hosting`.
 
-Quando alguém compra:
+### Pix automático pelo Mercado Pago (os créditos entram sozinhos)
+1. Em https://www.mercadopago.com.br/developers, entre em **Suas integrações > Criar aplicação**.
+   Escolha **Pagamentos online**, depois **Checkout Transparente** (ou "Checkout API").
+2. Na aplicação, abra **Credenciais de produção** e copie o **Access Token** (começa com `APP_USR-`).
+   Ele é uma senha: não mande print nem cole no chat.
+3. No terminal, rode este comando sozinho e cole o token quando ele pedir:
+   ```
+   firebase functions:secrets:set MP_ACCESS_TOKEN
+   ```
+4. Em `app/config.js`, mude `mercadoPago` para `true`. Publique com `firebase deploy --only functions,hosting`.
+
+Como funciona:
+- O cliente escolhe o pacote e o app mostra o QR Code (vale 30 minutos).
+- Quando o Pix é aprovado, os créditos entram sozinhos e a tela mostra "Pagamento aprovado!".
+- O dinheiro cai na sua conta do Mercado Pago, que cobra uma taxa por Pix (confira na sua conta).
+- Os pagamentos ficam no Firestore, na coleção `pagamentos`.
+
+Os preços dos pacotes estão em 2 lugares: `app/config.js` (`pacotes`) e `functions/index.js` (`PACOTES`). Se mudar o preço, mude nos dois.
+
+Quando alguém compra pelo Pix manual (com `mercadoPago: false`):
 1. O cliente escolhe o pacote, paga pelo QR Code ou pelo Pix copia e cola e toca em **Já paguei: enviar comprovante**.
    A mensagem chega no seu WhatsApp com o pacote e o usuário dele.
 2. Confira o Pix no app do banco.

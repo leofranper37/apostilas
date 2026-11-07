@@ -2743,12 +2743,13 @@ function abrirComprar(){
   const marcado = Math.max(0, pk.findIndex(p => p.destaque));
   modal(`<h2>Comprar créditos</h2>
   <p class="sub"><b>1 crédito = 1 página completa</b> gerada pela IA, com texto e desenhos. O planejamento e a contracapa não gastam créditos. Os créditos não expiram.${VENDA.cliente ? ` Seu saldo: <b>${creditosIA()}</b>.` : ''}</p>
-  <div class="pacotes" role="radiogroup" aria-label="Pacotes">${pk.map((p,i)=>`<label><input type="radio" name="pk" value="${i}" ${i===marcado?'checked':''}>${p.destaque?`<em>${esc(p.destaque)}</em>`:''}<b>${p.creditos} créditos</b><span>${precoBR(p.valor)}</span><small>${precoBR(p.valor/p.creditos)} por apostila</small></label>`).join('')}</div>
+  <div class="pacotes" role="radiogroup" aria-label="Pacotes">${pk.map((p,i)=>`<label><input type="radio" name="pk" value="${i}" ${i===marcado?'checked':''}>${p.destaque?`<em>${esc(p.destaque)}</em>`:''}<b>${p.creditos} créditos</b><span>${precoBR(p.valor)}</span><small>${precoBR(p.valor/p.creditos)} por página</small></label>`).join('')}</div>
   <div id="pk-pag"></div>
   <div class="modal-acoes" id="pk-acoes"><button class="btn" data-fechar>Fechar</button><button class="btn pri" id="pk-ir">Pagar com Pix</button></div>`);
   $('#pk-ir').onclick = async () => {
     const p = pk[+document.querySelector('[name=pk]:checked').value], txt = `${p.creditos} créditos (${precoBR(p.valor)})`;
     const msg = `Olá! Paguei ${txt} no Criador de Apostilas. Meu usuário: ${user}. Segue o comprovante:`;
+    if (CFG.mercadoPago && VENDA.on && VENDA.cliente){ pixAutomatico(p); return; }
     if (!(CFG.pix && CFG.pix.chave)){ window.open(linkZap(`Olá! Quero comprar ${txt} no Criador de Apostilas. Meu usuário: ${user}`), '_blank', 'noopener'); return; }
     const cod = codigoPixDe(p.valor, 'AP' + user);
     $('#pk-pag').innerHTML = `<div class="pix-caixa"><div id="pk-qr" aria-label="QR Code do Pix"></div><div>
@@ -2762,6 +2763,40 @@ function abrirComprar(){
     if (window.qrcode){ const g = qrcode(0, 'M'); g.addData(cod); g.make(); $('#pk-qr').innerHTML = g.createSvgTag({cellSize:4, margin:2, scalable:true}); }
     else $('#pk-qr').hidden = true;
   };
+}
+// Pix automático (Mercado Pago): o servidor cria a cobrança e os créditos entram sozinhos quando o pagamento é aprovado
+let conferindoPix = 0;
+async function pixAutomatico(p){
+  const vez = ++conferindoPix, txt = `${p.creditos} créditos (${precoBR(p.valor)})`;
+  $('#pk-ir').disabled = true; $('#pk-ir').textContent = 'Criando o Pix…';
+  const fn = n => VENDA.fb.fn.httpsCallable(VENDA.fb.functions, n);
+  let r;
+  try { r = (await fn('criarPix')({creditos: p.creditos})).data; }
+  catch(e){ $('#pk-ir').disabled = false; $('#pk-ir').textContent = 'Pagar com Pix'; aviso(e.message || 'Não consegui criar o Pix. Tente de novo.'); return; }
+  if (!document.body.contains($('#pk-pag'))) return;
+  document.querySelector('.pacotes').hidden = true;
+  $('#pk-pag').innerHTML = `<div class="pix-caixa">${r.qr ? `<img src="data:image/png;base64,${esc(r.qr)}" alt="QR Code do Pix" width="180" height="180" style="display:block">` : ''}<div>
+    <p style="margin:0 0 6px"><b>${txt}</b><br>Abra o app do banco, escolha <b>Pix > Ler QR Code</b> ou use o <b>Pix copia e cola</b>:</p>
+    <textarea id="pk-cod" rows="3" readonly aria-label="Pix copia e cola">${esc(r.codigo)}</textarea>
+    <div class="pl-acoes"><button class="btn peq" id="pk-copiar">Copiar código</button></div>
+    <p class="dica-campo" id="pk-st" role="status" style="margin:8px 0 0">⏳ Esperando o pagamento… Os créditos entram sozinhos assim que o Pix for aprovado (o código vale 30 minutos).</p></div></div>`;
+  $('#pk-acoes').innerHTML = `<button class="btn" data-fechar>Fechar</button>`;
+  $('#pk-copiar').onclick = async () => { try { await navigator.clipboard.writeText(r.codigo); $('#pk-copiar').textContent = '✓ Copiado'; } catch(_){ $('#pk-cod').select(); } };
+  const fim = Date.now() + 31 * 60000;
+  while (vez === conferindoPix && Date.now() < fim){
+    await new Promise(ok => setTimeout(ok, 5000));
+    if (!document.body.contains($('#pk-st'))) return;   // fechou a janela (se pagar depois, os créditos entram do mesmo jeito)
+    let st;
+    try { st = (await fn('conferirPix')({id: r.id})).data; } catch(_){ continue; }
+    if (st.status === 'approved'){
+      $('#pk-pag').innerHTML = `<p class="sub" style="font-size:17px;margin:8px 0">✅ <b>Pagamento aprovado!</b> ${nCred(st.creditos || p.creditos)} entraram na sua conta.</p>`;
+      $('#pk-acoes').innerHTML = `<button class="btn pri" data-fechar>Continuar</button>`;
+      return;
+    }
+    if (['rejected', 'cancelled', 'refunded'].includes(st.status)){
+      $('#pk-st').textContent = 'Este Pix expirou ou foi cancelado. Feche e gere outro.'; return;
+    }
+  }
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-comprar]')){ e.preventDefault(); fecharGaveta(); abrirComprar(); } });
 

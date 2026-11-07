@@ -31,7 +31,10 @@ window.APOSTILAS_CONFIG = {
 
   // Venda do acesso vitalício (página de vendas)
   valor: 0,                   // em reais; 0 = "A combinar" (o botão de compra abre o WhatsApp)
-  // Pix: enquanto a chave estiver vazia, o botão de compra abre o WhatsApp
+  // Pix automático pelo Mercado Pago (os créditos entram sozinhos). Precisa do segredo MP_ACCESS_TOKEN e das functions publicadas.
+  // Os preços dos pacotes também estão em functions/index.js (PACOTES): se mudar aqui, mude lá.
+  mercadoPago: true,
+  // Pix manual: enquanto a chave estiver vazia, o botão de compra abre o WhatsApp
   pix: {
     chave: '',                // CPF, CNPJ, e-mail, celular (+5524...) ou chave aleatória
     nome: '',                 // nome de quem recebe, como está no banco

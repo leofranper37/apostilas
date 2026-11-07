@@ -1,6 +1,7 @@
 // Modo automático: confere o login, gasta 1 crédito e pede o conteúdo ao Google Gemini. Se der erro, devolve o crédito.
 // Chave da IA (grátis em https://aistudio.google.com/apikey): firebase functions:secrets:set GEMINI_API_KEY
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { randomUUID } = require("crypto");
 const { defineSecret, defineString } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
@@ -268,4 +269,102 @@ exports.excluirCliente = onCall({ region: "southamerica-east1", maxInstances: 5,
   await db.recursiveDelete(db.collection("clientes").doc(uid));
   if (u) await getAuth().deleteUser(uid);
   return { ok: true };
+});
+
+// ---------- Compra de créditos por Pix (Mercado Pago): os créditos entram sozinhos quando o pagamento é aprovado ----------
+// Access Token de produção (Mercado Pago Developers > Suas integrações > Credenciais): firebase functions:secrets:set MP_ACCESS_TOKEN
+const MP = defineSecret("MP_ACCESS_TOKEN");
+// Mesmos pacotes de app/config.js. O preço vale o daqui: o app só diz quantos créditos o cliente escolheu.
+const PACOTES = [
+  { creditos: 5, valor: 19.9 },
+  { creditos: 10, valor: 34.9 },
+  { creditos: 30, valor: 89.9 },
+];
+const URL_AVISO = "https://southamerica-east1-criador-apostilas-leo.cloudfunctions.net/avisoMercadoPago";
+
+async function mercadoPago(caminho, opcoes = {}) {
+  const r = await fetch("https://api.mercadopago.com" + caminho, {
+    ...opcoes,
+    headers: { Authorization: `Bearer ${MP.value().trim()}`, "Content-Type": "application/json", ...(opcoes.headers || {}) },
+    signal: AbortSignal.timeout(20000),
+  });
+  const dados = await r.json().catch(() => ({}));
+  if (!r.ok) throw new ErroIA(`Mercado Pago: ${dados.message || dados.error || r.statusText}`, r.status);
+  return dados;
+}
+
+// Confere o pagamento direto no Mercado Pago e, se aprovado, soma os créditos uma vez só
+async function creditarSeAprovado(id) {
+  const p = await mercadoPago(`/v1/payments/${encodeURIComponent(id)}`);
+  const ref = db.collection("pagamentos").doc(String(p.id));
+  return db.runTransaction(async (t) => {
+    const s = await t.get(ref);
+    if (!s.exists) return { status: p.status };   // não foi criado por este app
+    if (s.get("creditado")) return { status: "approved", creditos: s.get("creditos"), jaCreditado: true };
+    if (p.status !== "approved" || Math.abs(+p.transaction_amount - s.get("valor")) > 0.001) {
+      t.update(ref, { status: p.status });
+      return { status: p.status };
+    }
+    t.update(ref, { status: "approved", creditado: true, aprovadoEm: FieldValue.serverTimestamp() });
+    t.update(db.collection("clientes").doc(s.get("uid")), { creditos: FieldValue.increment(s.get("creditos")), compras: FieldValue.increment(1) });
+    return { status: "approved", creditos: s.get("creditos") };
+  });
+}
+
+// O cliente escolheu o pacote: cria a cobrança Pix e devolve o QR Code
+exports.criarPix = onCall({ region: "southamerica-east1", secrets: [MP], maxInstances: 5 }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Entre na sua conta de novo.");
+  const pacote = PACOTES.find((p) => p.creditos === +(req.data || {}).creditos);
+  if (!pacote) throw new HttpsError("invalid-argument", "Pacote inválido. Atualize a página (Ctrl+Shift+R).");
+  const cli = await db.collection("clientes").doc(req.auth.uid).get();
+  if (!cli.exists || !cli.get("ativo")) throw new HttpsError("permission-denied", "Seu acesso não está liberado.");
+  const usuario = String(cli.get("usuario") || "cliente");
+  let p;
+  try {
+    p = await mercadoPago("/v1/payments", {
+      method: "POST",
+      headers: { "X-Idempotency-Key": randomUUID() },
+      body: JSON.stringify({
+        transaction_amount: pacote.valor,
+        description: `${pacote.creditos} créditos - Criador de Apostilas`,
+        payment_method_id: "pix",
+        // o Mercado Pago exige um e-mail; os clientes entram só com usuário, então vai um e-mail técnico
+        payer: { email: `cliente.${req.auth.uid.slice(0, 12).toLowerCase()}@criador-apostilas-leo.web.app`, first_name: usuario.slice(0, 40) },
+        external_reference: req.auth.uid,
+        notification_url: URL_AVISO,
+        date_of_expiration: new Date(Date.now() + 30 * 60000).toISOString().replace("Z", "-00:00"),
+      }),
+    });
+  } catch (e) {
+    console.error("falha ao criar o Pix:", e.status, e.message);
+    throw new HttpsError("unavailable", `Não consegui criar o Pix agora. Tente de novo em instantes. (motivo: ${String(e.message).slice(0, 120)})`);
+  }
+  const td = (p.point_of_interaction || {}).transaction_data || {};
+  await db.collection("pagamentos").doc(String(p.id)).set({
+    uid: req.auth.uid, usuario, creditos: pacote.creditos, valor: pacote.valor, status: p.status, creditado: false, criadoEm: FieldValue.serverTimestamp(),
+  });
+  return { id: String(p.id), codigo: td.qr_code || "", qr: td.qr_code_base64 || "", valor: pacote.valor, creditos: pacote.creditos };
+});
+
+// O app pergunta de tempos em tempos se o Pix já foi pago
+exports.conferirPix = onCall({ region: "southamerica-east1", secrets: [MP], maxInstances: 5 }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Entre na sua conta de novo.");
+  const id = String((req.data || {}).id || "");
+  const s = /^\d{1,20}$/.test(id) ? await db.collection("pagamentos").doc(id).get() : null;
+  if (!s || !s.exists || s.get("uid") !== req.auth.uid) throw new HttpsError("not-found", "Pagamento não encontrado.");
+  if (s.get("creditado")) return { status: "approved", creditos: s.get("creditos") };
+  try { return await creditarSeAprovado(id); }
+  catch (e) { console.warn("conferirPix:", e.status, e.message); return { status: s.get("status") || "pending" }; }
+});
+
+// Aviso do Mercado Pago (webhook). Não confia no aviso: confere o pagamento direto na API antes de creditar.
+exports.avisoMercadoPago = onRequest({ region: "southamerica-east1", secrets: [MP], maxInstances: 5, invoker: "public" }, async (req, res) => {
+  const b = req.body || {}, q = req.query || {};
+  const tipo = b.type || b.topic || q.type || q.topic;
+  const id = String((b.data && b.data.id) || q["data.id"] || q.id || "");
+  if (tipo === "payment" && /^\d{1,20}$/.test(id)) {
+    try { await creditarSeAprovado(id); }
+    catch (e) { console.error("aviso do Mercado Pago:", e.status, e.message); res.status(500).send("erro"); return; }
+  }
+  res.status(200).send("ok");
 });
