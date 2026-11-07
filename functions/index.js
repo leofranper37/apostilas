@@ -283,9 +283,11 @@ const PACOTES = [
 const URL_AVISO = "https://southamerica-east1-criador-apostilas-leo.cloudfunctions.net/avisoMercadoPago";
 
 async function mercadoPago(caminho, opcoes = {}) {
+  const token = String(MP.value() || "").trim();
+  if (token.length < 20) throw new ErroIA(`o token do Mercado Pago salvo no servidor está vazio ou incompleto (${token.length} caracteres)`, 401);
   const r = await fetch("https://api.mercadopago.com" + caminho, {
     ...opcoes,
-    headers: { Authorization: `Bearer ${MP.value().trim()}`, "Content-Type": "application/json", ...(opcoes.headers || {}) },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(opcoes.headers || {}) },
     signal: AbortSignal.timeout(20000),
   });
   const dados = await r.json().catch(() => ({}));
