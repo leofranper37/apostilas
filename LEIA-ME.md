@@ -6,7 +6,7 @@ Também abre em https://leofranper37.github.io/apostilas/ (app em /apostilas/app
 
 - O login é feito com **usuário e senha**, que o administrador cria no **Painel admin**.
 - O modo **Semiautomático** é grátis e ilimitado para todos os clientes liberados.
-- O modo **Automático** gasta 1 crédito por apostila, seção ou ilustração.
+- O modo **Automático** gasta 1 crédito por página completa (texto e desenhos), página ilustrada, atividade ou seção. O planejamento e a contracapa não gastam.
 - O administrador (usuário `admin`) não gasta créditos.
 
 ## Gerador de apostilas (botão "Criar com IA")
@@ -60,7 +60,9 @@ A IA do modo automático é o **Google Gemini**, que tem uma cota grátis por di
    Ele pede um cartão, mas tem uma cota grátis por mês. Com pouco uso, sai R$ 0.
    Dica: em Google Cloud > Faturamento > Orçamentos, crie um alerta de R$ 10 para ser avisado se algo cobrar.
 2. Crie a chave grátis em https://aistudio.google.com/apikey (entre com a sua conta Google e clique em **Create API key**).
-   Não ative o faturamento nessa chave: assim ela fica sempre no plano grátis e nunca cobra.
+   Sem faturamento, a chave fica no plano grátis (só texto, com limite por dia).
+   Hoje a chave está com faturamento **pré-pago**: o Gemini desconta do saldo colocado no AI Studio.
+   Se o saldo acabar, o cliente vê "402 Your prepayment credits are depleted" e o crédito dele volta. Coloque mais saldo em https://ai.studio/projects.
 3. No terminal, nesta pasta (cole a chave quando ele pedir):
    ```
    firebase functions:secrets:set GEMINI_API_KEY
