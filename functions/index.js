@@ -283,7 +283,7 @@ const PACOTES = [
 const URL_AVISO = "https://southamerica-east1-criador-apostilas-leo.cloudfunctions.net/avisoMercadoPago";
 
 async function mercadoPago(caminho, opcoes = {}) {
-  const token = String(MP.value() || "").trim();
+  const token = String(MP.value() || "").trim().replace(/^Bearer\s+/i, "");
   if (token.length < 20) throw new ErroIA(`o token do Mercado Pago salvo no servidor está vazio ou incompleto (${token.length} caracteres)`, 401);
   const r = await fetch("https://api.mercadopago.com" + caminho, {
     ...opcoes,
@@ -291,7 +291,11 @@ async function mercadoPago(caminho, opcoes = {}) {
     signal: AbortSignal.timeout(20000),
   });
   const dados = await r.json().catch(() => ({}));
-  if (!r.ok) throw new ErroIA(`Mercado Pago: ${dados.message || dados.error || r.statusText}`, r.status);
+  if (!r.ok) {
+    // ajuda a achar token copiado errado, sem mostrar o token: tamanho, começo (APP_USR-/TEST-) e se tem espaço no meio
+    const dica = r.status === 401 ? ` [token: ${token.length} caracteres, começa com ${token.slice(0, 8).replace(/[^A-Za-z_-]/g, "?")}${/\s/.test(token) ? ", tem espaço ou quebra de linha" : ""}]` : "";
+    throw new ErroIA(`Mercado Pago: ${dados.message || dados.error || r.statusText}${dica}`, r.status);
+  }
   return dados;
 }
 
@@ -339,7 +343,7 @@ exports.criarPix = onCall({ region: "southamerica-east1", secrets: [MP], maxInst
     });
   } catch (e) {
     console.error("falha ao criar o Pix:", e.status, e.message);
-    throw new HttpsError("unavailable", `Não consegui criar o Pix agora. Tente de novo em instantes. (motivo: ${String(e.message).slice(0, 120)})`);
+    throw new HttpsError("unavailable", `Não consegui criar o Pix agora. Tente de novo em instantes. (motivo: ${String(e.message).slice(0, 220)})`);
   }
   const td = (p.point_of_interaction || {}).transaction_data || {};
   await db.collection("pagamentos").doc(String(p.id)).set({
