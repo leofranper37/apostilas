@@ -1,6 +1,7 @@
 # Salva o Access Token do Mercado Pago no servidor e publica as funções do Pix.
 # Uso (no terminal, nesta pasta): powershell -ExecutionPolicy Bypass -File scripts\token-mp.ps1
 Set-Location (Split-Path $PSScriptRoot -Parent)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Write-Host ""
 Write-Host "1) No site do Mercado Pago: Producao > Credenciais de producao > copie o ACCESS TOKEN." -ForegroundColor Cyan
 Write-Host "2) Volte aqui, clique com o botao direito para colar e aperte Enter." -ForegroundColor Cyan
@@ -10,7 +11,16 @@ while ($true) {
   if ($t -match '^TEST-') { Write-Host "Esse e o token de TESTE. Copie o da aba PRODUCAO (comeca com APP_USR-)." -ForegroundColor Yellow; continue }
   if ($t -notmatch '^APP_USR-\S+$') { Write-Host "Isso nao parece o Access Token (ele comeca com APP_USR- e nao tem espacos). Copie de novo." -ForegroundColor Yellow; continue }
   if ($t.Length -lt 60) { Write-Host "Esse codigo e curto demais: deve ser a Public Key. Copie o ACCESS TOKEN." -ForegroundColor Yellow; continue }
-  break
+  # pergunta ao proprio Mercado Pago se o token vale, antes de salvar
+  try {
+    $eu = Invoke-RestMethod -Uri "https://api.mercadopago.com/users/me" -Headers @{ Authorization = "Bearer $t" } -TimeoutSec 20
+    Write-Host "O Mercado Pago aceitou o token. Conta: $($eu.nickname) (site $($eu.site_id))" -ForegroundColor Green
+    break
+  } catch {
+    $msg = $_.ErrorDetails.Message; if (-not $msg) { $msg = $_.Exception.Message }
+    Write-Host "O Mercado Pago RECUSOU esse token: $msg" -ForegroundColor Red
+    Write-Host "Confira: aba PRODUCAO da aplicacao, ambiente de producao ativado, e copie o Access Token de novo." -ForegroundColor Yellow
+  }
 }
 Write-Host "Token conferido ($($t.Length) caracteres). Salvando no servidor..." -ForegroundColor Green
 $t | firebase functions:secrets:set MP_ACCESS_TOKEN --data-file -
